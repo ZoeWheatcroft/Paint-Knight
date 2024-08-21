@@ -1,0 +1,3184 @@
+00001000 Starting Address
+Assembler used: EASy68K Editor/Assembler v5.16.01
+Created On: 2/6/2024 11:02:28 AM
+
+00000000                             1  *-----------------------------------------------------------
+00000000                             2  * Title      : Main Gameloop program
+00000000                             3  * Written by : Zoe Wheatcroft
+00000000                             4  * Date       : 6/8/2023
+00000000                             5  * Description: 
+00000000                             6  *-----------------------------------------------------------
+00001000                             7      ORG    $1000
+00001000                             8  
+00001000                             9  D_REGS       REG  D0-D7
+00001000                            10  A_REGS       REG  A0-A7
+00001000                            11  
+00001000                            12  START:                  ; first instruction of program
+00001000                            13  
+00001000                            14  main
+00001000                            15  
+00001000  4EB9 000012D6             16      jsr     initScreen
+00001006  4EB9 00001A94             17      jsr     initTitleScreen
+0000100C  103C 005E                 18      move.b  #DRAW_BUFFER, D0
+00001010  4E4F                      19      trap    #15
+00001012  4EB9 00001AD8             20      jsr     getStartKey
+00001018                            21  
+00001018  4EB9 00001094             22      jsr     displayLoadingScreen
+0000101E  103C 005E                 23      move.b  #DRAW_BUFFER, D0
+00001022  4E4F                      24      trap    #15
+00001024                            25      
+00001024  4EB9 000010BC             26      jsr     displayInstructions
+0000102A  103C 005E                 27      move.b  #DRAW_BUFFER,d0
+0000102E  4E4F                      28      trap    #15
+00001030  4EB9 000010FC             29      jsr     getContinueKey
+00001036                            30  
+00001036                            31  startGame
+00001036  4EB9 00001094             32      jsr     displayLoadingScreen
+0000103C  103C 005E                 33      move.b  #DRAW_BUFFER, D0
+00001040  4E4F                      34      trap    #15
+00001042                            35      
+00001042  4EB9 0000229E             36      jsr     initBackground
+00001048  4EB9 00001BF8             37      jsr     initEnemy
+0000104E  4EB9 00001306             38      jsr     initPlayer
+00001054                            39      
+00001054  103C 005E                 40      move.b  #DRAW_BUFFER, D0
+00001058  4E4F                      41      trap    #15
+0000105A                            42      
+0000105A  33FC 0000 00002668        43      move.w  #0, GameState ; set the game state to the normal game loop
+00001062                            44      
+00001062  4EB9 000012A6             45      jsr     initTimeVariables
+00001068                            46      
+00001068                            47  gameLoop
+00001068  4EB9 000012BA             48      jsr     updateTimeVariables
+0000106E  4EB9 0000233E             49      jsr     updateBackground
+00001074  4EB9 00001BEA             50      jsr     updateEnemy
+0000107A  4EB9 000013A0             51      jsr     updatePlayer
+00001080  4EB9 00001EF0             52      jsr     checkEasel
+00001086                            53      
+00001086  103C 005E                 54      move.b  #DRAW_BUFFER, D0
+0000108A  4E4F                      55      trap    #15
+0000108C                            56      
+0000108C                            57      ; get the game state and use a virtual table to call next func
+0000108C  4EB9 00001292             58      jsr     getGameState
+00001092  4E90                      59      jsr     (a0)
+00001094                            60      
+00001094                            61      
+00001094                            62      
+00001094                            63  displayLoadingScreen
+00001094  4EB9 0000126C             64      jsr     clearScreen
+0000109A  103C 0050                 65      move.b  #SET_PEN_COLOR, d0
+0000109E  223C 00FFFFFF             66      move.l  #WHITE, d1
+000010A4  4E4F                      67      trap    #15
+000010A6                            68      
+000010A6  43F9 0084357C             69      lea     LoadingMessage, a1
+000010AC  103C 005F                 70      move.b  #DRAW_TEXT, d0
+000010B0  323C 010E                 71      move.w  #SCREEN_WIDTH/2-50, d1
+000010B4  343C 01C2                 72      move.w  #SCREEN_HEIGHT/2-50, d2
+000010B8  4E4F                      73      trap    #15
+000010BA                            74     
+000010BA  4E75                      75      rts
+000010BC                            76      
+000010BC                            77  displayInstructions
+000010BC  4EB9 0000126C             78      jsr     clearScreen
+000010C2                            79      ; get the bit map we're rendering 
+000010C2  43F9 005D2492             80      lea     Instructions_bmp, a1
+000010C8  2F09                      81      move.l  a1, -(sp)
+000010CA                            82      ; starting top left corner of chunk
+000010CA  303C 0000                 83      move.w  #000, d0 ; x
+000010CE  E188                      84      lsl.l     #$8, d0
+000010D0  E188                      85      lsl.l     #$8, d0
+000010D2  303C 0000                 86      move.w  #000, d0 ; y
+000010D6  2F00                      87      move.l  d0, -(sp)
+000010D8                            88      
+000010D8                            89      ; set the width and height of what we want to render
+000010D8  2F3C 00000280             90      move.l  #SCREEN_WIDTH,-(sp) ; d3 = width of chunk
+000010DE  2F3C 000003E8             91      move.l  #SCREEN_HEIGHT,-(sp) ; d4 = chunk height
+000010E4                            92      
+000010E4  2F3C 00000000             93      move.l  #$00000000,-(sp) ; d5 = where to display
+000010EA  2F29 001C                 94      move.l  $1c(a1),-(sp) ; d6 = 32/24 bit color
+000010EE                            95  
+000010EE  4EB9 00002102             96      jsr     displayChunk
+000010F4  DFFC 00000018             97      add.l   #24, sp
+000010FA                            98  
+000010FA                            99      
+000010FA  4E75                     100      rts
+000010FC                           101      
+000010FC                           102  getContinueKey  
+000010FC  103C 0005                103      move.b  #READ_CHAR, d0
+00001100  4E4F                     104      trap    #15
+00001102  0C01 0065                105      cmpi.b   #101, d1
+00001106  66F4                     106      bne     getContinueKey
+00001108  4E75                     107      rts
+0000110A                           108      
+0000110A                           109  gamePlayerDied
+0000110A                           110  *   Set the background color to black
+0000110A                           111  *   Write: GAME LOST you died!
+0000110A                           112  
+0000110A  7200                     113      move.l  #0, d1
+0000110C  103C 0050                114      move.b  #SET_PEN_COLOR, D0
+00001110  4E4F                     115      trap    #15 ; draw the background
+00001112  203C 00000051            116      move.l  #SET_FILL_COLOR, D0
+00001118  4E4F                     117      trap    #15
+0000111A                           118  
+0000111A  103C 0057                119      move.b  #DRAW_RECT, d0
+0000111E  323C 0000                120      move.w  #0, d1
+00001122  343C 0000                121      move.w  #0, d2
+00001126  363C 0280                122      move.w  #SCREEN_WIDTH, d3
+0000112A  383C 03E8                123      move.w  #SCREEN_HEIGHT,d4
+0000112E  4E4F                     124      trap    #15 
+00001130                           125  
+00001130  43F9 0084352C            126      lea     LostMessage, a1
+00001136  323C 00C8                127      move.w  #200, d1
+0000113A  343C 00C8                128      move.w  #200, d2
+0000113E  103C 005F                129      move.b  #DRAW_TEXT, d0
+00001142  4E4F                     130      trap    #15
+00001144                           131      
+00001144  43F9 00843560            132      lea     DiedMessage, a1
+0000114A  323C 0050                133      move.w  #80, d1
+0000114E  343C 00DC                134      move.w  #220, d2
+00001152  103C 005F                135      move.b  #DRAW_TEXT, d0
+00001156  4E4F                     136      trap    #15
+00001158                           137      
+00001158  43F9 0084356A            138      lea     ReplayMessage, a1
+0000115E  323C 0050                139      move.w  #80, d1
+00001162  343C 00EB                140      move.w  #235, d2
+00001166  103C 005F                141      move.b  #DRAW_TEXT, d0
+0000116A  4E4F                     142      trap    #15
+0000116C                           143      
+0000116C  103C 005E                144       move.b  #DRAW_BUFFER, D0
+00001170  4E4F                     145      trap    #15
+00001172                           146  
+00001172  6000 017E                147      bra     getReplayKey
+00001176                           148      
+00001176  303C 0009                149      move.w  #TERMINATE, d0
+0000117A  4E4F                     150      trap    #15
+0000117C                           151  
+0000117C                           152  gameSunset
+0000117C                           153  *   Set the background color to yellow and pen color to black
+0000117C                           154  *   Write: GAME LOST you ran out of time!
+0000117C                           155  
+0000117C  7200                     156      move.l  #0, d1
+0000117E  103C 0050                157      move.b  #SET_PEN_COLOR, D0
+00001182  4E4F                     158      trap    #15 ; draw the background
+00001184  203C 00000051            159      move.l  #SET_FILL_COLOR, D0
+0000118A  4E4F                     160      trap    #15
+0000118C                           161  
+0000118C  103C 0057                162      move.b  #DRAW_RECT, d0
+00001190  323C 0000                163      move.w  #0, d1
+00001194  343C 0000                164      move.w  #0, d2
+00001198  363C 0280                165      move.w  #SCREEN_WIDTH, d3
+0000119C  383C 03E8                166      move.w  #SCREEN_HEIGHT,d4
+000011A0  4E4F                     167      trap    #15 
+000011A2                           168      
+000011A2  43F9 0084352C            169      lea     LostMessage, a1
+000011A8  323C 00C8                170      move.w  #200, d1
+000011AC  343C 00C8                171      move.w  #200, d2
+000011B0  103C 005F                172      move.b  #DRAW_TEXT, d0
+000011B4  4E4F                     173      trap    #15
+000011B6                           174      
+000011B6  43F9 00843536            175      lea     SunsetMessage, a1
+000011BC  323C 0050                176      move.w  #80, d1
+000011C0  343C 00DC                177      move.w  #220, d2
+000011C4  103C 005F                178      move.b  #DRAW_TEXT, d0
+000011C8  4E4F                     179      trap    #15
+000011CA                           180  
+000011CA  43F9 0084356A            181      lea     ReplayMessage, a1
+000011D0  323C 0050                182      move.w  #80, d1
+000011D4  343C 00EB                183      move.w  #235, d2
+000011D8  103C 005F                184      move.b  #DRAW_TEXT, d0
+000011DC  4E4F                     185      trap    #15   
+000011DE                           186      
+000011DE  103C 005E                187      move.b  #DRAW_BUFFER, D0
+000011E2  4E4F                     188      trap    #15
+000011E4                           189  
+000011E4  6000 010C                190      bra     getReplayKey
+000011E8                           191      
+000011E8  303C 0009                192      move.w  #TERMINATE, d0
+000011EC  4E4F                     193      trap    #15
+000011EE                           194      
+000011EE                           195  
+000011EE                           196  gameWon
+000011EE                           197  *   Set the background color to yellow and pen color to black
+000011EE                           198  *   Write: GAME WON you cleared the hill and made it to the easel before sundown!
+000011EE                           199  
+000011EE  223C 000169C4            200      move.l  #YELLOW, d1
+000011F4  103C 0050                201      move.b  #SET_PEN_COLOR, D0
+000011F8  4E4F                     202      trap    #15 ; draw the background
+000011FA  203C 00000051            203      move.l  #SET_FILL_COLOR, D0
+00001200  4E4F                     204      trap    #15
+00001202                           205  
+00001202  103C 0057                206      move.b  #DRAW_RECT, d0
+00001206  323C 0000                207      move.w  #0, d1
+0000120A  343C 0000                208      move.w  #0, d2
+0000120E  363C 0280                209      move.w  #SCREEN_WIDTH, d3
+00001212  383C 03E8                210      move.w  #SCREEN_HEIGHT,d4
+00001216  4E4F                     211      trap    #15 
+00001218                           212      
+00001218  7200                     213      move.l  #0, d1
+0000121A  103C 0050                214      move.b  #SET_PEN_COLOR, d0
+0000121E  4E4F                     215      trap    #15
+00001220                           216      
+00001220  43F9 008434D4            217      lea     WonMessage, a1
+00001226  323C 00C8                218      move.w  #200, d1
+0000122A  343C 00C8                219      move.w  #200, d2
+0000122E  103C 005F                220      move.b  #DRAW_TEXT, d0
+00001232  4E4F                     221      trap    #15
+00001234                           222      
+00001234  43F9 008434DD            223      lea     WonMessage2, a1
+0000123A  323C 0050                224      move.w  #80, d1
+0000123E  343C 00DC                225      move.w  #220, d2
+00001242  103C 005F                226      move.b  #DRAW_TEXT, d0
+00001246  4E4F                     227      trap    #15
+00001248                           228      
+00001248                           229  ;   code is not working atm and dont want it to bug during demo
+00001248                           230  *    lea     ScoreMessage, a1
+00001248                           231  *    move.w  #80, d1
+00001248                           232  *    move.w  #235, d2
+00001248                           233  *    move.b  #DRAW_TEXT, d0
+00001248                           234  *    trap    #15
+00001248                           235  *    
+00001248                           236  *    ; calculate the player's final score 
+00001248                           237  *    move.l  SunYPos, d0
+00001248                           238  *    move.l  #HILLTOP_BOT, d1
+00001248                           239  *    sub.l   d0, d1
+00001248                           240  *    ; d1 = final score = total distance to bottom of hills - position of sun
+00001248                           241  *    ; this rewards for speed 
+00001248                           242  *    move.l  d1, Score
+00001248                           243  *    lea     Score, a1
+00001248                           244  *    move.w  #150, d1
+00001248                           245  *    move.w  #235, d2
+00001248                           246  *    move.b  #DRAW_TEXT, d0
+00001248                           247  *    trap    #15
+00001248                           248      
+00001248  43F9 0084356A            249      lea     ReplayMessage, a1
+0000124E  323C 0050                250      move.w  #80, d1
+00001252  343C 00EB                251      move.w  #235, d2
+00001256  103C 005F                252      move.b  #DRAW_TEXT, d0
+0000125A  4E4F                     253      trap    #15
+0000125C                           254      
+0000125C  103C 005E                255       move.b  #DRAW_BUFFER, D0
+00001260  4E4F                     256      trap    #15
+00001262                           257  
+00001262  6000 008E                258      bra     getReplayKey
+00001266                           259      
+00001266  303C 0009                260      move.w  #TERMINATE, d0
+0000126A  4E4F                     261      trap    #15
+0000126C                           262      
+0000126C                           263  
+0000126C                           264  
+0000126C                           265  clearScreen
+0000126C  103C 0050                266      move.b  #SET_PEN_COLOR, d0
+00001270  7200                     267      move.l  #0, d1
+00001272  4E4F                     268      trap    #15
+00001274  103C 0051                269      move.b  #SET_FILL_COLOR, d0
+00001278  4E4F                     270      trap    #15
+0000127A                           271  
+0000127A  103C 0057                272      move.b  #DRAW_RECT, d0
+0000127E  323C 0000                273      move.w  #0, d1
+00001282  343C 0000                274      move.w  #0, d2
+00001286  363C 0280                275      move.w  #SCREEN_WIDTH, d3
+0000128A  383C 03E8                276      move.w  #SCREEN_HEIGHT, d4
+0000128E  4E4F                     277      trap    #15
+00001290  4E75                     278      rts
+00001292                           279      
+00001292                           280      
+00001292                           281      
+00001292                           282  * get the game state and return the function that should be called 
+00001292                           283  * this uses a func table to see what the game should do next (game loop, game over, game won, etc)
+00001292                           284  * returns address of next game state func to call in a0
+00001292                           285  getGameState
+00001292  3039 00002668            286      move.w  GameState, d0
+00001298  E548                     287      lsl.w   #2, d0
+0000129A  43F9 0084359E            288      lea     GameStateFunctionTable, a1
+000012A0  2071 0000                289      move.l  (a1,d0),a0
+000012A4  4E75                     290      rts
+000012A6                           291      
+000012A6                           292  initTimeVariables
+000012A6                           293      ; since the random num generator is also based off time, we init that here too
+000012A6  4EB9 00002074            294      jsr     seedRandomNumber
+000012AC  103C 0008                295      move.b  #GET_TIME, d0
+000012B0  4E4F                     296      trap    #15
+000012B2  23C1 0000266A            297      move.l  d1, LastFrameTime
+000012B8  4E75                     298      rts
+000012BA                           299      
+000012BA                           300  updateTimeVariables
+000012BA  2439 0000266A            301      move.l  LastFrameTime, d2
+000012C0  103C 0008                302      move.b  #GET_TIME, d0
+000012C4  4E4F                     303      trap    #15
+000012C6  23C1 0000266A            304      move.l  d1, LastFrameTime
+000012CC  9282                     305      sub.l   d2, d1
+000012CE  23C1 0000266E            306      move.l  d1, DeltaTime
+000012D4  4E75                     307      rts
+000012D6                           308  
+000012D6                           309  initScreen
+000012D6  103C 0021                310      move.b  #SET_RESOLUTION, d0
+000012DA  323C 0280                311      move.w  #SCREEN_WIDTH, d1
+000012DE  4841                     312      swap    d1
+000012E0  323C 03E8                313      move.w  #SCREEN_HEIGHT, D1
+000012E4  4E4F                     314      trap    #15
+000012E6                           315      * turn on double buffering
+000012E6  123C 0011                316      move.b  #17, d1
+000012EA  103C 005C                317      move.b  #SET_DRAW_MODE, d0
+000012EE  4E4F                     318      trap    #15
+000012F0  4E75                     319      rts
+000012F2                           320      
+000012F2                           321  getReplayKey
+000012F2  103C 0005                322      move.b  #READ_CHAR, d0
+000012F6  4E4F                     323      trap    #15
+000012F8  B23C 0072                324      cmp.b   #114, d1
+000012FC  66F4                     325      bne     getReplayKey
+000012FE  6700 FD36                326      beq     startGame
+00001302                           327  
+00001302  FFFF FFFF                328      SIMHALT             ; halt simulator
+00001306                           329  
+00001306                           330  * Put variables and constants here
+00001306                           331  
+00001306                           332      Include     "Player.X68"
+00001306                           333  
+00001306                           334  
+00001306                           335  initPlayer
+00001306                           336      ; get the knight and set the initial pos 
+00001306  41F9 00002628            337      lea     Knight,a0
+0000130C  243C 00000392            338      move.l  #KNIGHT_STARTY, d2
+00001312  0482 00000020            339      sub.l   #KNIGHT_HEIGHT, d2 ; y pos w/ account for knight height
+00001318  263C 0000001E            340      move.l  #KNIGHT_WIDTH, d3 
+0000131E  E24B                     341      lsr.w     #$1, d3 ; div d3 by 2?
+00001320  283C 0000013F            342      move.l  #KNIGHT_STARTX, d4 
+00001326  9883                     343      sub.l   d3, d4 ; d4 = x pos w/ account for width
+00001328  E18C                     344      lsl.l   #$8, d4
+0000132A  E18C                     345      lsl.l   #$8, d4
+0000132C  2144 0000                346      move.l  d4, KNIGHT_XPOS(a0)
+00001330  E18A                     347      lsl.l   #$8, d2
+00001332  E18A                     348      lsl.l   #$8, d2
+00001334  2142 0004                349      move.l  d2, KNIGHT_YPOS(a0)
+00001338  4282                     350      clr.l     d2
+0000133A  2142 0008                351      move.l  d2, KNIGHT_XVEL(A0) ; set velocity to 0
+0000133E  2142 000C                352      move.l  d2, KNIGHT_YVEL(a0)
+00001342  317C 0003 0010           353      move.w  #KNIGHT_STARTHP, KNIGHT_HP(a0)
+00001348                           354      
+00001348                           355      ; get the bit map we're rendering 
+00001348  43F9 0054AF20            356      lea     Knight_bmp, a1
+0000134E  2F09                     357      move.l  a1, -(sp)
+00001350                           358      ; starting top left corner of chunk
+00001350  303C 0000                359      move.w  #000, d0 ; x
+00001354  E188                     360      lsl.l     #$8, d0
+00001356  E188                     361      lsl.l     #$8, d0
+00001358  303C 0000                362      move.w  #000, d0 ; y
+0000135C  2F00                     363      move.l  d0, -(sp)
+0000135E                           364  
+0000135E                           365      ; set the width and height of what we want to render
+0000135E  2F3C 0000001E            366      move.l  #KNIGHT_WIDTH,-(sp) ; d3 = width of chunk
+00001364  2F3C 00000020            367      move.l  #KNIGHT_HEIGHT,-(sp) ; d4 = chunk height
+0000136A                           368  
+0000136A  2028 0000                369      move.l  KNIGHT_XPOS(a0),d0 ; x
+0000136E  2228 0004                370      move.l  KNIGHT_YPOS(a0),d1 ; y
+00001372  E089                     371      lsr.l     #$8, d1
+00001374  E089                     372      lsr.l     #$8, d1
+00001376  3001                     373      move.w  d1, d0
+00001378  2F00                     374      move.l  d0, -(sp) ; where to draw it
+0000137A  2F29 001C                375      move.l  $1c(a1),-(sp) ; d6 = 32/24 bit color
+0000137E  4EB9 00002102            376      jsr     displayChunk
+00001384  DFFC 00000018            377      add.l   #24, sp
+0000138A                           378      
+0000138A                           379      ; set the state to 0
+0000138A  41F9 00002628            380      lea     Knight, a0
+00001390  317C 0000 0012           381      move.w  #KNIGHT_IDLE, KNIGHT_STATE(a0)
+00001396                           382      
+00001396  33FC 0000 00002648       383      move.w  #0, KnightLastHP
+0000139E                           384      
+0000139E  4E75                     385      rts
+000013A0                           386      
+000013A0                           387      
+000013A0                           388  updatePlayer
+000013A0  41F9 00002628            389      lea     Knight, a0
+000013A6  23E8 0000 00002640       390      move.l  KNIGHT_XPOS(a0),KnightLastXPos
+000013AE  23E8 0004 00002644       391      move.l  KNIGHT_YPOS(a0),KnightLastYPos
+000013B6  4EB9 00001716            392      jsr     getPlayerInput
+000013BC                           393      
+000013BC  4EB9 000013E4            394      jsr     checkPlayerNeedInval
+000013C2  0C47 0000                395      cmpi.w  #0, d7
+000013C6  6700 0008                396      beq     dontInvalPlayer
+000013CA  4EB9 0000152C            397      jsr     invalPlayer
+000013D0                           398  dontInvalPlayer
+000013D0  4EB9 00001466            399      jsr     invalHealth
+000013D6  4EB9 00001626            400      jsr     handlePlayerAttack
+000013DC  4EB9 0000143A            401      jsr     checkPlayerAlive
+000013E2  4E75                     402      rts
+000013E4                           403      
+000013E4                           404  
+000013E4                           405  checkPlayerNeedInval
+000013E4  41F9 00002628            406      lea     Knight, a0
+000013EA  2228 0000                407      move.l  KNIGHT_XPOS(a0),d1
+000013EE  2039 00002640            408      move.l  KnightLastXPos, d0
+000013F4  B280                     409      cmp.l   d0, d1
+000013F6  6600 0030                410      bne     returnPlayerNeedInval
+000013FA  2228 0004                411      move.l  KNIGHT_YPOS(a0),d1
+000013FE  2039 00002644            412      move.l  KnightLastYPos, d0
+00001404  B280                     413      cmp.l   d0, d1
+00001406  6600 0020                414      bne     returnPlayerNeedInval    
+0000140A                           415      ; x and y are the same, check if enemy collided or state changed
+0000140A  2039 00843B0A            416      move.l  EnemyToRedraw, d0
+00001410  0C40 0000                417      cmpi.w  #0, d0
+00001414  6600 0012                418      bne     returnPlayerNeedInval
+00001418  3039 0000264A            419      move.w  KnightLastState, d0
+0000141E  3228 0012                420      move.w  KNIGHT_STATE(a0),d1
+00001422  B280                     421      cmp.l   d0, d1
+00001424  6600 0002                422      bne     returnPlayerNeedInval
+00001428                           423      
+00001428                           424  returnPlayerNeedInval
+00001428  33C1 0000264A            425      move.w  d1, KnightLastState
+0000142E  3E3C 0001                426      move.w  #1, d7
+00001432  4E75                     427      rts
+00001434                           428  returnPlayerNoInval
+00001434  3E3C 0000                429      move.w  #0, d7
+00001438  4E75                     430      rts
+0000143A                           431  
+0000143A                           432  checkPlayerAlive
+0000143A  41F9 00002628            433      lea     Knight, a0
+00001440  3028 0010                434      move.w  KNIGHT_HP(a0),d0
+00001444  B07C 0000                435      cmp.w   #0, d0
+00001448  6700 0012                436      beq     killPlayer
+0000144C  2028 0004                437      move.l  KNIGHT_YPOS(a0),d0 ; check if the player fell off, L, ratio, etc
+00001450  4840                     438      swap    d0
+00001452  0C40 03E8                439      cmpi.w  #SCREEN_HEIGHT,d0
+00001456  6E00 0004                440      bgt     killPlayer
+0000145A  4E75                     441      rts
+0000145C                           442  killPlayer
+0000145C  33FC 0001 00002668       443      move.w  #PLAYER_LOST, GameState
+00001464  4E75                     444      rts
+00001466                           445  
+00001466                           446  invalHealth 
+00001466  45F9 00002648            447      lea  KnightLastHP, a2
+0000146C  3012                     448      move.w  (a2),d0
+0000146E  41F9 00002628            449      lea     Knight, a0
+00001474  3E28 0010                450      move.w  KNIGHT_HP(a0),d7
+00001478  BE40                     451      cmp.w   d0, d7
+0000147A  6700 00A2                452      beq     invalHealthReturn
+0000147E                           453  
+0000147E  3A3C 024C                454      move.w  #HEART_START_X, d5
+00001482  3C3C 0003                455      move.w  #KNIGHT_STARTHP, d6
+00001486  5346                     456      subi.w  #1, d6 ; compensate for dbra
+00001488                           457  
+00001488                           458  invalHealthLoop
+00001488  BC47                     459      cmp     d7, d6 ; check if this heart should be full
+0000148A  6C00 0048                460      bge     invalHealthEmpty
+0000148E                           461      * Draw a full heart
+0000148E  43F9 005D0C5A            462      lea     Heart, a1
+00001494  2F09                     463      move.l  a1, -(sp)
+00001496                           464      ; starting top left corner of chunk
+00001496  303C 0000                465      move.w  #000, d0 ; x
+0000149A  E188                     466      lsl.l     #$8, d0
+0000149C  E188                     467      lsl.l     #$8, d0
+0000149E  303C 0000                468      move.w  #000, d0 ; y
+000014A2  2F00                     469      move.l  d0, -(sp)
+000014A4                           470  
+000014A4                           471      ; set the width and height of what we want to render
+000014A4  2F3C 00000020            472      move.l  #HEART_WIDTH,-(sp) ; d3 = width of chunk
+000014AA  2F3C 00000018            473      move.l  #HEART_HEIGHT,-(sp) ; d4 = chunk height
+000014B0                           474  
+000014B0  2005                     475      move.l  d5,d0 ; x
+000014B2  223C 000003C0            476      move.l  #HEART_START_Y,d1 ; y
+000014B8  E188                     477      lsl.l     #$8, d0
+000014BA  E188                     478      lsl.l     #$8, d0
+000014BC  3001                     479      move.w  d1, d0
+000014BE  2F00                     480      move.l  d0, -(sp) ; where to draw it
+000014C0  2F29 001C                481      move.l  $1c(a1),-(sp) ; d6 = 32/24 bit color
+000014C4  4EB9 00002102            482      jsr     displayChunk
+000014CA  DFFC 00000018            483      add.l   #24, sp
+000014D0  6000 0044                484      bra     invalHealthLoopIncrement
+000014D4                           485  invalHealthEmpty
+000014D4  43F9 005D0C5A            486      lea     Heart, a1
+000014DA  2F09                     487      move.l  a1, -(sp)
+000014DC                           488      ; starting top left corner of chunk
+000014DC  303C 0020                489      move.w  #HEART_WIDTH, d0 ; x
+000014E0  E188                     490      lsl.l     #$8, d0
+000014E2  E188                     491      lsl.l     #$8, d0
+000014E4  303C 0000                492      move.w  #000, d0 ; y
+000014E8  2F00                     493      move.l  d0, -(sp)
+000014EA                           494  
+000014EA                           495      ; set the width and height of what we want to render
+000014EA  2F3C 00000020            496      move.l  #HEART_WIDTH,-(sp) ; d3 = width of chunk
+000014F0  2F3C 00000018            497      move.l  #HEART_HEIGHT,-(sp) ; d4 = chunk height
+000014F6                           498  
+000014F6  2005                     499      move.l  d5,d0 ; x
+000014F8  223C 000003C0            500      move.l  #HEART_START_Y,d1 ; y
+000014FE  E188                     501      lsl.l     #$8, d0
+00001500  E188                     502      lsl.l     #$8, d0
+00001502  3001                     503      move.w  d1, d0
+00001504  2F00                     504      move.l  d0, -(sp) ; where to draw it
+00001506  2F29 001C                505      move.l  $1c(a1),-(sp) ; d6 = 32/24 bit color
+0000150A  4EB9 00002102            506      jsr     displayChunk
+00001510  DFFC 00000018            507      add.l   #24, sp
+00001516                           508  
+00001516                           509  invalHealthLoopIncrement
+00001516  0645 FFD6                510      addi.w   #HEART_SPACING, d5   
+0000151A  51CE FF6C                511      dbra    d6, invalHealthLoop
+0000151E                           512  invalHealthReturn
+0000151E  41F9 00002628            513      lea     Knight,a0
+00001524  3028 0010                514      move.w  KNIGHT_HP(a0),d0
+00001528  3480                     515      move.w  d0,(a2)
+0000152A  4E75                     516      rts
+0000152C                           517      
+0000152C                           518  invalPlayer
+0000152C  43F9 00002678            519      lea     Hills, a1
+00001532  2F09                     520      move.l  a1, -(sp)
+00001534                           521      ; starting top left corner of chunk
+00001534  2039 00002640            522      move.l     KnightLastXPos, d0
+0000153A  2239 00002644            523      move.l     KnightLastYPos, d1
+00001540  E089                     524      lsr.l     #$8, d1
+00001542  E089                     525      lsr.l     #$8, d1
+00001544  3001                     526      move.w  d1, d0
+00001546  2F00                     527      move.l  d0, -(sp)
+00001548                           528      
+00001548                           529      ; set the width and height of what we want to render
+00001548  2F3C 0000001E            530      move.l  #KNIGHT_WIDTH,-(sp) ; d3 = width of chunk
+0000154E  2F3C 00000020            531      move.l  #KNIGHT_HEIGHT,-(sp) ; d4 = chunk height
+00001554                           532      
+00001554  41F9 00002640            533      lea     KnightLastXPos, a0
+0000155A  45F9 00002644            534      lea     KnightLastYPos, a2
+00001560  2010                     535      move.l  (a0),d0 ; x
+00001562  2212                     536      move.l  (a2),d1 ; y
+00001564  E089                     537      lsr.l     #$8, d1
+00001566  E089                     538      lsr.l     #$8, d1
+00001568  3001                     539      move.w  d1, d0
+0000156A  2F00                     540      move.l  d0, -(sp) ; where to draw it
+0000156C  2F29 001C                541      move.l  $1c(a1),-(sp) ; d6 = 32/24 bit color
+00001570  4EB9 00002102            542      jsr     displayChunk
+00001576  DFFC 00000018            543      add.l   #24, sp
+0000157C                           544      
+0000157C  2039 00843B0A            545      move.l  EnemyToRedraw, d0
+00001582  0C80 00000000            546      cmpi.l  #0, d0 ; is enemy to redraw null
+00001588  6700 004C                547      beq     drawPlayer ; if enemy == null, dont draw
+0000158C                           548  invalPlayerEnemy
+0000158C  2040                     549      move.l  d0, a0
+0000158E  43F9 0054EB58            550      lea     Enemy_bmp, a1
+00001594  2F09                     551      move.l  a1, -(sp)
+00001596                           552      ; starting top left corner of chunk
+00001596  3028 000A                553      move.w      ENEMY_STATE(a0),d0
+0000159A  C0FC 0022                554      mulu.w      #ENEMY_WIDTH, d0
+0000159E  323C 0000                555      move.w     #0,d1 ; y
+000015A2  E188                     556      lsl.l     #$8, d0
+000015A4  E188                     557      lsl.l     #$8, d0
+000015A6  3001                     558      move.w  d1, d0
+000015A8  2F00                     559      move.l  d0, -(sp)
+000015AA                           560      
+000015AA                           561      ; set the width and height of what we want to render
+000015AA  2F3C 00000022            562      move.l  #ENEMY_WIDTH,-(sp) ; d3 = width of chunk
+000015B0  2F3C 0000001A            563      move.l  #ENEMY_HEIGHT,-(sp) ; d4 = chunk height
+000015B6                           564      
+000015B6  2028 0000                565      move.l  ENEMY_X(a0),d0 ; x
+000015BA  2228 0002                566      move.l  ENEMY_Y(a0),d1 ; y
+000015BE  E089                     567      lsr.l     #$8, d1
+000015C0  E089                     568      lsr.l     #$8, d1
+000015C2  3001                     569      move.w  d1, d0
+000015C4  2F00                     570      move.l  d0, -(sp) ; where to draw it
+000015C6  2F29 001C                571      move.l  $1c(a1),-(sp) ; d6 = 32/24 bit color
+000015CA  4EB9 00002102            572      jsr     displayChunk
+000015D0  DFFC 00000018            573      add.l   #24, sp
+000015D6                           574      
+000015D6                           575  drawPlayer
+000015D6                           576      ; get the bit map we're rendering 
+000015D6  43F9 0054AF20            577      lea     Knight_bmp, a1
+000015DC  41F9 00002628            578      lea     Knight,a0
+000015E2  2F09                     579      move.l  a1, -(sp)
+000015E4                           580      ; starting top left corner of chunk
+000015E4  3228 0012                581      move.w  KNIGHT_STATE(a0),d1
+000015E8  C2FC 001E                582      mulu.w  #KNIGHT_WIDTH, d1
+000015EC  3001                     583      move.w  d1, d0 ; x
+000015EE  E188                     584      lsl.l     #$8, d0
+000015F0  E188                     585      lsl.l     #$8, d0
+000015F2  303C 0000                586      move.w  #000, d0 ; y
+000015F6  2F00                     587      move.l  d0, -(sp)
+000015F8                           588      
+000015F8                           589      ; set the width and height of what we want to render
+000015F8  2F3C 0000001E            590      move.l  #KNIGHT_WIDTH,-(sp) ; d3 = width of chunk
+000015FE  2F3C 00000020            591      move.l  #KNIGHT_HEIGHT,-(sp) ; d4 = chunk height
+00001604                           592      
+00001604  2028 0000                593      move.l  KNIGHT_XPOS(a0),d0 ; x
+00001608  2228 0004                594      move.l  KNIGHT_YPOS(a0),d1 ; y
+0000160C  E089                     595      lsr.l     #$8, d1
+0000160E  E089                     596      lsr.l     #$8, d1
+00001610  3001                     597      move.w  d1, d0
+00001612  2F00                     598      move.l  d0, -(sp) ; where to draw it
+00001614  2F29 001C                599      move.l  $1c(a1),-(sp) ; d6 = 32/24 bit color
+00001618  4EB9 00002102            600      jsr     displayChunk
+0000161E  DFFC 00000018            601      add.l   #24, sp
+00001624  4E75                     602      rts
+00001626                           603      
+00001626                           604  
+00001626                           605  handlePlayerAttack
+00001626  41F9 00002628            606      lea     Knight, a0
+0000162C  4280                     607      clr.l   d0
+0000162E  3028 0012                608      move.w  KNIGHT_STATE(a0),d0
+00001632  E548                     609      lsl.w   #2, d0 ; multiply by 4 so we can use the virtual table
+00001634  43F9 00843592            610      lea     KnightAttackFunctionTable, a1
+0000163A  2471 0000                611      move.l  (a1,d0),a2
+0000163E  4E92                     612      jsr     (a2)
+00001640  4E75                     613      rts
+00001642                           614      
+00001642                           615      
+00001642                           616  idlePlayerAttack
+00001642  103C 003D                617      move.b  #GET_MOUSE, d0
+00001646  123C 0000                618      move.b  #READ_MOUSE_DOWN, d1
+0000164A  4E4F                     619      trap    #15
+0000164C                           620      
+0000164C  0800 0000                621      btst.l  #0, d0
+00001650  6700 0010                622      beq     idlePlayerAttackReturn
+00001654                           623      
+00001654  317C 0001 0012           624      move.w  #KNIGHT_ATTACK1, KNIGHT_STATE(a0)
+0000165A  33FC 0001 0000263E       625      move.w  #1, KnightAttacking
+00001662                           626  idlePlayerAttackReturn
+00001662  4E75                     627      rts
+00001664                           628  advancingPlayerAttack
+00001664  317C 0002 0012           629      move.w  #KNIGHT_ATTACK2, KNIGHT_STATE(a0)
+0000166A  4EB9 00001688            630      jsr     swordAttack
+00001670  4E75                     631      rts
+00001672                           632  performingPlayerAttack
+00001672  317C 0000 0012           633      move.w  #KNIGHT_IDLE, KNIGHT_STATE(a0)
+00001678  33FC 0000 0000263E       634      move.w  #0, KnightAttacking
+00001680  4EB9 00001688            635      jsr     swordAttack
+00001686  4E75                     636      rts
+00001688                           637      
+00001688                           638  swordAttack
+00001688  41F9 00002628            639      lea     Knight, a0
+0000168E  43F9 00843AB2            640      lea     EnemyStart, a1
+00001694  5489                     641      adda.l  #$2, a1
+00001696  45F9 00843B08            642      lea     EnemyEnd, a2
+0000169C                           643      
+0000169C                           644  swordAttackLoop
+0000169C                           645      * put enemy dimension and position on stack
+0000169C  3029 0008                646      move.w  ENEMY_H(a1),d0 ; h2
+000016A0  2F00                     647      move.l  d0,-(sp)  
+000016A2  3029 0006                648      move.w  ENEMY_W(a1),d0 ; w2
+000016A6  2F00                     649      move.l  d0,-(sp)  
+000016A8  3029 0002                650      move.w  ENEMY_Y(a1),d0 ; y2
+000016AC  2F00                     651      move.l  d0,-(sp)  
+000016AE  3029 0000                652      move.w  ENEMY_X(a1),d0 ; x2
+000016B2  2F00                     653      move.l  d0,-(sp)  
+000016B4                           654      * put sword dimension and position on stack
+000016B4  2F3C 0000000D            655      move.l  #KNIGHT_SWORD_H,-(sp) ; h1
+000016BA  2F3C 0000000E            656      move.l  #KNIGHT_SWORD_W,-(sp) ; w1
+000016C0  2028 0004                657      move.l  KNIGHT_YPOS(a0),d0
+000016C4  4840                     658      swap    d0
+000016C6  0640 0002                659      addi.w  #KNIGHT_SWORD_Y,d0
+000016CA  2F00                     660      move.l  d0,-(sp) ; y1
+000016CC  2028 0000                661      move.l  KNIGHT_XPOS(a0),d0
+000016D0  4840                     662      swap    d0
+000016D2  0640 0010                663      addi.w  #KNIGHT_SWORD_X,d0
+000016D6  2F00                     664      move.l  d0,-(sp) ; x1
+000016D8                           665      
+000016D8  4EB9 00001F5C            666      jsr     collide
+000016DE  DFFC 00000020            667      add.l   #$20,sp
+000016E4                           668      
+000016E4  0C07 0000                669      cmpi.b  #0, d7
+000016E8  6700 0020                670      beq     continueSwordAttackLoop
+000016EC  3029 0004                671      move.w  ENEMY_HP(a1),d0
+000016F0  0C00 0000                672      cmpi.b  #0, d0
+000016F4  6700 0014                673      beq     continueSwordAttackLoop  ; enemy is dead, do not hurt
+000016F8  5340                     674      subi.w  #1, d0
+000016FA  3340 0004                675      move.w  d0, ENEMY_HP(a1)
+000016FE  337C 0001 000A           676      move.w  #ENEMY_HURT, ENEMY_STATE(a1)
+00001704  337C 0000 000C           677      move.w  #0, ENEMY_STATE_TIMER(a1)
+0000170A                           678  continueSwordAttackLoop
+0000170A  D3FC 0000000E            679      add.l   #ENEMY_STRUCT_SIZE, a1
+00001710  B5C9                     680      cmp.l   a1, a2
+00001712  6688                     681      bne     swordAttackLoop
+00001714                           682       
+00001714                           683  returnSwordAttack
+00001714  4E75                     684      rts
+00001716                           685      
+00001716                           686  getPlayerInput
+00001716  41F9 00002628            687      lea     Knight,a0
+0000171C                           688  
+0000171C                           689  
+0000171C                           690      ; start by updating velocities
+0000171C  103C 0013                691      move.b  #GET_4KEYS, d0
+00001720  223C 4144574C            692      move.l  #'A'<<24+'D'<<16+'W'<<8+'L',D1 ; check for keypress (a,d,w,f)
+00001726  4E4F                     693      trap    #15
+00001728                           694      
+00001728                           695      
+00001728                           696      ; calculate jump velocity
+00001728                           697      ; traditionally, we would factor in delta time
+00001728                           698      ; however, since this is an instant force jump instead of accel, 
+00001728                           699      ; we do not use delta time to keep jumps consistent
+00001728  283C 000499BC            700      move.l  #KNIGHT_JUMP, d4
+0000172E                           701  
+0000172E                           702      
+0000172E                           703      ; calculate movement acceleration
+0000172E  2C39 0000266E            704      move.l  DeltaTime, d6
+00001734  243C 0000044C            705      move.l  #KNIGHT_ACCELERATION, d2
+0000173A  C547                     706      exg     d2, d7
+0000173C  4EB9 00001FE2            707      jsr     multiply ; d2 = accel * time, amount of accel to add
+00001742  C547                     708      exg     d2, d7
+00001744                           709  
+00001744                           710      
+00001744                           711      
+00001744  4285                     712      clr.l     d5
+00001746  4280                     713      clr.l     d0 ; d0 will act as a flag for if a was pressed
+00001748  4287                     714      clr.l     d7 ; flag for if d was pressed
+0000174A                           715      ; check for a 
+0000174A  0801 0018                716      btst.l  #24, d1
+0000174E  6700 0014                717      beq     getPlayerInputD
+00001752  2628 0008                718      move.l  KNIGHT_XVEL(a0),d3
+00001756  9682                     719      sub.l   d2, d3
+00001758  2143 0008                720      move.l  d3, KNIGHT_XVEL(a0)
+0000175C  1A3C 0001                721      move.b  #1, d5
+00001760  103C 0001                722      move.b  #1, d0
+00001764                           723      
+00001764                           724  getPlayerInputD
+00001764                           725      ; check for d 
+00001764  0801 0010                726      btst.l  #16, d1
+00001768  6700 0014                727      beq     handleXVelocityInput
+0000176C  2628 0008                728      move.l  KNIGHT_XVEL(a0),d3
+00001770  D682                     729      add.l   d2, d3
+00001772  2143 0008                730      move.l  d3, KNIGHT_XVEL(a0)
+00001776  1A3C 0001                731      move.b  #1, d5
+0000177A  1E3C 0001                732      move.b  #1, d7
+0000177E                           733      
+0000177E                           734  handleXVelocityInput
+0000177E  BE00                     735      cmp.b   d0,d7 ; if got both or neither, skip
+00001780  6700 002E                736      beq     getPlayerInputW 
+00001784                           737      ; cur x vel is in d3
+00001784  0C00 0000                738      cmpi.b  #0, d0
+00001788  6700 0016                739      beq     handleXVelocityInputD ; got d, handle accordingly
+0000178C                           740      ; got a, velocity should be negative
+0000178C  0C83 00000000            741      cmpi.l  #0, d3
+00001792                           742      ; if d3 < 0, branch, nothing to do
+00001792  6D00 001C                743      blt     getPlayerInputW
+00001796  4483                     744      neg.l     d3
+00001798  2143 0008                745      move.l  d3, KNIGHT_XVEL(a0)
+0000179C  6000 0012                746      bra     getPlayerInputW 
+000017A0                           747      
+000017A0                           748  handleXVelocityInputD
+000017A0                           749      ; got d, velocity should be pos
+000017A0  0C83 00000000            750      cmpi.l  #0, d3
+000017A6  6E00 0008                751      bgt     getPlayerInputW ; if already positive, nothing to do
+000017AA  4483                     752      neg.l     d3
+000017AC  2143 0008                753      move.l  d3, KNIGHT_XVEL(a0)
+000017B0                           754      
+000017B0                           755  
+000017B0                           756  getPlayerInputW
+000017B0                           757      ; check for w 
+000017B0  4200                     758      clr.b   d0
+000017B2  0801 0008                759      btst.l  #8, d1
+000017B6  6700 002C                760      beq     addPlayerGravity
+000017BA  3239 0000263C            761      move.w  KnightGrounded, d1
+000017C0  0C01 0000                762      cmpi.b  #0, d1
+000017C4  6700 001E                763      beq     addPlayerGravity ; player can't jump if not grounded
+000017C8  4240                     764      clr.w   d0
+000017CA  33C0 0000263C            765      move.w  d0, KnightGrounded ; set grounded to false
+000017D0  103C 0001                766      move.b  #1, d0 ; switch on flag for jump
+000017D4  4280                     767      clr.l   d0
+000017D6  2140 000C                768      move.l  d0, KNIGHT_YVEL(a0) ; clear the y velocity to create a clean and consistent jump
+000017DA  2628 000C                769      move.l  KNIGHT_YVEL(a0),d3 ; add the jump to velocity
+000017DE  9684                     770      sub.l   d4, d3
+000017E0  2143 000C                771      move.l  d3, KNIGHT_YVEL(a0)
+000017E4                           772     ; bra     checkXPlayerInput
+000017E4                           773  
+000017E4                           774  
+000017E4                           775  addPlayerGravity
+000017E4  283C 00002328            776      move.l  #GRAVITY_SCALE, d4
+000017EA                           777      ; because gravity is acceleration, we multiply it by delta time
+000017EA  C947                     778      exg     d4, d7
+000017EC  4EB9 00001FE2            779      jsr     multiply
+000017F2  C947                     780      exg     d4, d7
+000017F4  2628 000C                781      move.l  KNIGHT_YVEL(a0),d3
+000017F8  D684                     782      add.l   d4, d3
+000017FA  2143 000C                783      move.l  d3, KNIGHT_YVEL(a0)
+000017FE                           784  
+000017FE                           785  checkXPlayerInput
+000017FE                           786      ; use the updated velocities to move the player 
+000017FE  4247                     787      clr     d7 ; d7 = flag for moved
+00001800                           788      ; if no a/d input, set xvel to 0
+00001800  0C05 0000                789      cmpi.b  #0, d5
+00001804  6600 0006                790      bne     movePlayerX
+00001808  2145 0008                791      move.l  d5, KNIGHT_XVEL(a0)
+0000180C                           792      
+0000180C                           793  movePlayerX
+0000180C  2228 0008                794      move.l  KNIGHT_XVEL(a0),d1
+00001810                           795      
+00001810                           796      ; clamp velocity to knight speed 
+00001810  C347                     797      exg     d1, d7
+00001812  2F3C 00014C08            798      move.l  #KNIGHT_SPEED, -(sp)
+00001818  2F3C FFFEB3F8            799      move.l  #-KNIGHT_SPEED, -(sp)
+0000181E  4EB9 00002006            800      jsr     clamp
+00001824  508F                     801      add.l   #8, sp
+00001826  C347                     802      exg     d1, d7
+00001828                           803      
+00001828  C347                     804      exg     d1, d7
+0000182A  4EB9 00001FE2            805      jsr     multiply
+00001830  C347                     806      exg     d1, d7
+00001832                           807      
+00001832  2428 0000                808      move.l  KNIGHT_XPOS(a0),d2
+00001836  D481                     809      add.l   d1, d2
+00001838                           810      
+00001838                           811  
+00001838                           812  movePlayerY
+00001838  2228 000C                813      move.l  KNIGHT_YVEL(a0),d1
+0000183C  2C39 0000266E            814      move.l  DeltaTime, d6
+00001842  C347                     815      exg     d1, d7
+00001844  4EB9 00001FE2            816      jsr     multiply
+0000184A  C347                     817      exg     d1, d7
+0000184C  2628 0004                818      move.l  KNIGHT_YPOS(a0),d3
+00001850  D681                     819      add.l   d1, d3
+00001852                           820      
+00001852                           821  checkCollision
+00001852                           822      ; prepare to skip ground check if d0 = 1 (pressed jump)
+00001852                           823      ; if don't skip ground check, the player detect ground and stop
+00001852  0C00 0001                824      cmpi.b  #1, d0 ; was jump pressed?
+00001856  6700 0066                825      beq     playerCeilingCheck ; if yes, skip ground check
+0000185A                           826      
+0000185A                           827  playerGroundCheck
+0000185A  43F9 00002594            828      lea     BlockStart,a1
+00001860  5489                     829      adda.l  #$2, a1
+00001862  45F9 00002626            830      lea     BlockEnd, a2
+00001868                           831      
+00001868                           832  groundCheckLoop
+00001868  2F09                     833      move.l  a1,-(sp)
+0000186A  2F03                     834      move.l  d3,-(sp) ; move new y pos on stack
+0000186C  2F02                     835      move.l  d2,-(sp) ; move new x pos on stack
+0000186E                           836      
+0000186E  4EB9 00001994            837      jsr     playerCollideYDown ; check for ground
+00001874                           838      
+00001874  241F                     839      move.l  (sp)+,d2
+00001876  261F                     840      move.l  (sp)+,d3
+00001878  588F                     841      add.l   #4, sp ; compensate for address put on sp
+0000187A                           842      
+0000187A  0C07 0000                843      cmpi.b  #0, d7 ; 0 = collided, 1 = no collision
+0000187E  6700 001A                844      beq     playerIsGrounded ; if collided, leave loop and set vars
+00001882                           845      
+00001882                           846      ; did not hit ground yet
+00001882  D3FC 00000008            847      adda.l  #BLOCK_DATA_SIZE, a1 ; increase a1 to next block
+00001888  B4C9                     848      cmp     a1, a2 ; is current address at the end? 
+0000188A  66DC                     849      bne     groundCheckLoop ; if address!=end, loop
+0000188C                           850      
+0000188C                           851      
+0000188C  303C 0000                852      move.w  #0, d0
+00001890  33C0 0000263C            853      move.w  d0, KnightGrounded ; set grounded to 0, false
+00001896  6000 0026                854      bra     playerCeilingCheck ; not grounded, check ceiling 
+0000189A                           855  playerIsGrounded
+0000189A  303C 0001                856      move.w  #1, d0 ; set grounded to 1, true
+0000189E  33C0 0000263C            857      move.w  d0, KnightGrounded
+000018A4  4280                     858      clr.l   d0
+000018A6                           859      ; snap the player to the ground under them
+000018A6  3029 0002                860      move.w  2(a1),d0 ; get the top of what was collided with
+000018AA                           861      ;subi.w  #1,d0 ; subtract one so that we're over it
+000018AA  0440 0020                862      subi.w  #KNIGHT_HEIGHT, d0 ; offset by the player height
+000018AE  4840                     863      swap    d0 ; align it with knight ypos formatting
+000018B0  2140 0004                864      move.l  d0, KNIGHT_YPOS(a0) ; snap player to ground
+000018B4  4280                     865      clr.l   d0
+000018B6  2140 000C                866      move.l  d0, KNIGHT_YVEL(a0) ; reset player y vel 
+000018BA  6000 0056                867      bra     checkCollisionX ; if grounded, skip check for ceiling
+000018BE                           868      
+000018BE                           869  playerCeilingCheck
+000018BE  43F9 00002594            870      lea     BlockStart,a1
+000018C4  5489                     871      adda.l  #$2, a1
+000018C6  45F9 00002626            872      lea     BlockEnd, a2
+000018CC                           873      
+000018CC                           874  ceilingCheckLoop
+000018CC  2F09                     875      move.l  a1,-(sp)
+000018CE  2F03                     876      move.l  d3,-(sp) ; move new y pos on stack
+000018D0  2F02                     877      move.l  d2,-(sp) ; move new x pos on stack
+000018D2                           878      
+000018D2  4EB9 00001954            879      jsr     playerCollideYUp ; check for ceiling above
+000018D8                           880      
+000018D8  241F                     881      move.l  (sp)+,d2
+000018DA  261F                     882      move.l  (sp)+,d3
+000018DC  588F                     883      add.l   #4, sp ; compensate for address put on sp
+000018DE                           884      
+000018DE  0C07 0000                885      cmpi.b  #0, d7 ; 0 = collided, 1 = no collision
+000018E2  6700 0014                886      beq     ceilingCollision ; if collided, leave loop and set vars
+000018E6                           887      
+000018E6                           888      ; did not hit ground yet
+000018E6  D3FC 00000008            889      adda.l  #BLOCK_DATA_SIZE, a1 ; increase a1 to next block
+000018EC  B4C9                     890      cmp     a1, a2 ; is current address at the end? 
+000018EE  66DC                     891      bne     ceilingCheckLoop ; if address!=end, loop
+000018F0                           892  
+000018F0  2143 0004                893      move.l  d3, KNIGHT_YPOS(a0) ; advance position 
+000018F4  6000 001C                894      bra     checkCollisionX
+000018F8                           895  
+000018F8                           896  ceilingCollision
+000018F8                           897      ; yowza we collided
+000018F8  4280                     898      clr.l   d0
+000018FA  2140 000C                899      move.l  d0, KNIGHT_YVEL(a0)
+000018FE                           900      ; snap to the ceiling
+000018FE  4280                     901      clr.l   d0 
+00001900  3029 0002                902      move.w  BLOCK_Y(a1),d0
+00001904  3229 0006                903      move.w  BLOCK_H(a1),d1
+00001908  D041                     904      add.w   d1, d0 ; bottom edge of the ceiling
+0000190A  5240                     905      addi.w  #1, d0
+0000190C  4840                     906      swap    d0 ; d0 = bottom to snap to
+0000190E  2140 0004                907      move.l  d0, KNIGHT_YPOS(a0)
+00001912                           908      
+00001912                           909  checkCollisionX
+00001912  43F9 00002594            910          lea     BlockStart,a1
+00001918  5489                     911      adda.l  #$2, a1
+0000191A  45F9 00002626            912      lea     BlockEnd, a2
+00001920                           913      
+00001920                           914  checkCollisionXLoop
+00001920  2F02                     915      move.l  d2,-(sp) ; put x velocity as parameter
+00001922  2F09                     916      move.l  a1,-(sp)
+00001924  2F03                     917      move.l  d3,-(sp) ; move new y pos on stack
+00001926  2F02                     918      move.l  d2,-(sp) ; move new x pos on stack
+00001928                           919      
+00001928  4EB9 00001A16            920      jsr     playerCollideX ; check for ceiling above
+0000192E                           921      
+0000192E  241F                     922      move.l  (sp)+,d2
+00001930  261F                     923      move.l  (sp)+,d3
+00001932  508F                     924      add.l   #8, sp ; compensate for address put on sp
+00001934                           925      
+00001934  0C07 0000                926      cmpi.b  #0, d7 ; 0 = collided, 1 = no collision
+00001938  6700 0014                927      beq     returnGetPlayerInput ; if collided, leave loop and set vars
+0000193C                           928      
+0000193C                           929      ; did not hit ground yet
+0000193C  D3FC 00000008            930      adda.l  #BLOCK_DATA_SIZE, a1 ; increase a1 to next block
+00001942  B4C9                     931      cmp     a1, a2 ; is current address at the end? 
+00001944  66DA                     932      bne     checkCollisionXLoop  ; if address!=end, loop
+00001946                           933      
+00001946  2142 0000                934      move.l  d2, KNIGHT_XPOS(a0) ; add x vel to pos
+0000194A  1E3C 0001                935      move.b  #1, d7
+0000194E                           936      
+0000194E                           937  returnGetPlayerInput
+0000194E  1E3C 0001                938      move.b  #1, d7
+00001952  4E75                     939      rts
+00001954                           940  
+00001954                           941  
+00001954                           942  
+00001954                           943  
+00001954                           944  playerCollideYUp
+00001954  48E7 FF00                945      movem.l D_REGS,-(sp) ; preserve all registers
+00001958  202F 0024                946      move.l  36(sp),d0 ; d0 is this x/left 
+0000195C  222F 0028                947      move.l  40(sp),d1 ; d1 is this y/top
+00001960  226F 002C                948      move.l  44(sp),a1 ; a1 = address of other
+00001964                           949      
+00001964  4840                     950      swap    d0
+00001966  4841                     951      swap    d1 ; put x and y into lower word to cut off floating points
+00001968                           952  
+00001968                           953      ; check this.top =< other.bottom
+00001968                           954      
+00001968  3629 0002                955      move.w  BLOCK_Y(a1),d3 ; d3 = other top
+0000196C  3829 0006                956      move.w  BLOCK_H(a1),d4 ; needed to offset for bottom
+00001970  D644                     957      add.w   d4, d3 ; d3 = other.bottom
+00001972  B243                     958      cmp.w   d3, d1 ; top =< bottom? 
+00001974  6E00 0096                959      bgt     noCollisionFound ; branch if false
+00001978                           960      
+00001978                           961      ; to prevent something above counting a collision, check we are under the block
+00001978                           962      ; check old bottom < block bot
+00001978  41F9 00002628            963      lea     Knight, a0
+0000197E  2828 0004                964      move.l  KNIGHT_YPOS(a0),d4
+00001982  4844                     965      swap    d4
+00001984  0684 00000020            966      addi.l  #KNIGHT_HEIGHT, d4 ; d4 = knight's bottom edge
+0000198A  B843                     967      cmp.w     d3, d4 ; old bot > block bot?
+0000198C  6D00 007E                968      blt     noCollisionFound ; branch if old < black
+00001990                           969  
+00001990  6000 0038                970      bra     gotCollisionY ; check the sides 
+00001994                           971  
+00001994                           972  playerCollideYDown
+00001994  48E7 FF00                973      movem.l D_REGS,-(sp) ; preserve all registers
+00001998  202F 0024                974      move.l  36(sp),d0 ; d0 is this x/left 
+0000199C  222F 0028                975      move.l  40(sp),d1 ; d1 is this y/top
+000019A0  226F 002C                976      move.l  44(sp),a1 ; a1 = address of other
+000019A4                           977      
+000019A4  4840                     978      swap    d0
+000019A6  4841                     979      swap    d1 ; put x and y into lower word to cut off floating points
+000019A8                           980  
+000019A8                           981      ; check this.bottom >= other.top
+000019A8                           982      
+000019A8  3401                     983      move.w  d1, d2 ; move y into d2 and add height to make it bottom
+000019AA  0642 0020                984      addi.w  #KNIGHT_HEIGHT,d2 ; d2 = this.bottom
+000019AE  3629 0002                985      move.w  BLOCK_Y(a1),d3 ; d3 = other top
+000019B2  B642                     986      cmp.w   d2, d3
+000019B4  6E00 0056                987      bgt     noCollisionFound ; this bottom was above other top, no collision
+000019B8                           988      
+000019B8                           989      ; to prevent colliding w/ thing above and phasing through thing underneath,
+000019B8                           990      ; check old top < block top
+000019B8  41F9 00002628            991      lea     Knight, a0
+000019BE  2828 0004                992      move.l  KNIGHT_YPOS(a0),d4
+000019C2  4844                     993      swap    d4
+000019C4  B843                     994      cmp.w     d3, d4 
+000019C6                           995      ; break if old top > block top, means block is just underneath
+000019C6  6E00 0044                996      bgt     noCollisionFound
+000019CA                           997      
+000019CA                           998  
+000019CA                           999  gotCollisionY
+000019CA                          1000  
+000019CA                          1001      ; check if this left is between others
+000019CA                          1002      ; if(this.left>=other.left){
+000019CA                          1003      ;   if(this.left =< other.right){
+000019CA                          1004      ;       bra     collisionFoundY
+000019CA                          1005      ; d0 = this.left
+000019CA  3429 0000               1006      move.w  BLOCK_X(a1),d2 ; d2 = other.left
+000019CE  B042                    1007      cmp     d2, d0 ; branch if d0 < d2
+000019D0  6D00 0012               1008      blt     checkCollisionYRight
+000019D4  3629 0004               1009      move.w  BLOCK_W(a1),d3 ; d3 = other.width
+000019D8  D642                    1010      add.w   d2, d3 ; d3 = other.width + other.left = other.right
+000019DA  B043                    1011      cmp     d3, d0 ; branch if d0 > d3
+000019DC  6E00 0006               1012      bgt     checkCollisionYRight
+000019E0  6000 001C               1013      bra     collisionFound ; left wall was within others
+000019E4                          1014  
+000019E4                          1015  checkCollisionYRight
+000019E4                          1016      ; if(this.right >= other.left){
+000019E4                          1017      ;   if(this.right <= other.right){
+000019E4                          1018      ;       bra collisionFoundY
+000019E4  0640 0013               1019      add.w   #KNIGHT_HB_W, d0 ; d0 = this.right
+000019E8  3429 0000               1020      move.w  BLOCK_X(a1),d2 ; d2 = other.left
+000019EC  B042                    1021      cmp.w     d2, d0 ; branch if d0 < d2
+000019EE  6D00 001C               1022      blt     noCollisionFound
+000019F2  3629 0004               1023      move.w  BLOCK_W(a1),d3 ; d3 = other.width
+000019F6  D642                    1024      add.w   d2, d3 ; d3 = other.width + other.left = other.right
+000019F8  B043                    1025      cmp.w     d3, d0 ; branch if d0 > d3
+000019FA  6E00 0010               1026      bgt     noCollisionFound
+000019FE                          1027      ; found a collision!
+000019FE                          1028      
+000019FE                          1029  collisionFound
+000019FE  4CDF 00FF               1030      movem.l (sp)+,D_REGS
+00001A02  4287                    1031      clr.l   d7
+00001A04  1E3C 0000               1032      move.b  #0, d7
+00001A08  6000 000A               1033      bra     returnPlayerCollide
+00001A0C                          1034      
+00001A0C                          1035  noCollisionFound
+00001A0C  4CDF 00FF               1036      movem.l (sp)+,D_REGS
+00001A10  1E3C 0001               1037      move.b  #1, d7
+00001A14                          1038  returnPlayerCollide
+00001A14  4E75                    1039      rts
+00001A16                          1040      
+00001A16                          1041  
+00001A16                          1042  playerCollideX
+00001A16  48E7 FF00               1043      movem.l D_REGS,-(sp) ; preserve all registers
+00001A1A  2C2F 0028               1044      move.l  40(sp),d6 ; d6 = x velocity
+00001A1E  202F 0024               1045      move.l  36(sp),d0 ; d0 is this x/left 
+00001A22  222F 0028               1046      move.l  40(sp),d1 ; d1 is this y/top
+00001A26  226F 002C               1047      move.l  44(sp),a1 ; a1 = address of other
+00001A2A                          1048      
+00001A2A  4840                    1049      swap    d0
+00001A2C  4841                    1050      swap    d1 ; put x and y into lower word to cut off floating points
+00001A2E  4846                    1051      swap    d6
+00001A30                          1052  
+00001A30  BC7C 0000               1053      cmp.w   #0, d6
+00001A34  6D00 000E               1054      blt     playerCollideXLeft 
+00001A38                          1055       ; if(this.right >= other.left)
+00001A38  0640 0013               1056      add.w   #KNIGHT_HB_W, d0 ; d0 = this.right
+00001A3C  3629 0000               1057      move.w  BLOCK_X(a1),d3 ; d3 = other.left
+00001A40  B043                    1058      cmp     d3, d0 ; branch if d0 < d3
+00001A42  6DC8                    1059      blt     noCollisionFound
+00001A44                          1060      
+00001A44                          1061  playerCollideXLeft
+00001A44                          1062      ; if this.left <= other.right
+00001A44                          1063      ; d0 = this.left
+00001A44  3629 0000               1064      move.w  BLOCK_X(a1),d3 ; d3 = other.left
+00001A48  3829 0004               1065      move.w  BLOCK_W(a1),d4
+00001A4C  D644                    1066      add.w   d4, d3 ; d3 = other.right
+00001A4E  B043                    1067      cmp.w   d3, d0 
+00001A50  6EBA                    1068      bgt     noCollisionFound
+00001A52                          1069      
+00001A52                          1070  playerCollideXCheckTop
+00001A52                          1071      ; if this.top >= other.top
+00001A52                          1072          ; if this.top <= other.bottom
+00001A52  3629 0002               1073      move.w  BLOCK_Y(a1),d3 ; d3 = other.top
+00001A56  B243                    1074      cmp     d3, d1 ; this top >= other.top?
+00001A58  6D00 0010               1075      blt     playerCollideXCheckTopSmaller
+00001A5C  3829 0006               1076      move.w  BLOCK_H(a1),d4
+00001A60  D644                    1077      add.w   d4, d3
+00001A62  B243                    1078      cmp     d3, d1 ; this top <= other.bottom??
+00001A64  6E00 0004               1079      bgt     playerCollideXCheckTopSmaller
+00001A68  6094                    1080      bra     collisionFound
+00001A6A                          1081  playerCollideXCheckTopSmaller
+00001A6A                          1082  
+00001A6A                          1083  playerCollideXCheckBottom
+00001A6A                          1084      ; this.bottom >= other.top
+00001A6A                          1085          ; this.bottom <= other.bottom
+00001A6A  3629 0002               1086      move.w  BLOCK_Y(a1),d3 ; d3 = other.top
+00001A6E  41F9 00002628           1087      lea     Knight, a0
+00001A74  3A28 0020               1088      move.w  KNIGHT_HEIGHT(a0),d5
+00001A78  DA41                    1089      add.w   d1,d5 ; d5 = this.bottom
+00001A7A  BA43                    1090      cmp     d3, d5 ; bottom>= top?
+00001A7C  6D00 0012               1091      blt     playerCollideXCheckBottomSmaller
+00001A80  3829 0006               1092      move.w  BLOCK_H(a1),d4
+00001A84  D644                    1093      add.w   d4, d3 ; d3 = other.bottom
+00001A86  B243                    1094      cmp     d3, d1 ; this bottom <= other.bottom??
+00001A88  6E00 0006               1095      bgt     playerCollideXCheckBottomSmaller
+00001A8C  6000 FF70               1096      bra     collisionFound
+00001A90                          1097      
+00001A90                          1098  playerCollideXCheckBottomSmaller
+00001A90  6000 FF7A               1099      bra     noCollisionFound
+00001A94                          1100  
+00001A94                          1101  
+00001A94                          1102  
+00001A94                          1103  
+00001A94                          1104  
+00001A94                          1105  
+00001A94                          1106  
+00001A94                          1107  
+00001A94                          1108  
+00001A94                          1109  
+00001A94                          1110  
+00001A94                          1111  
+00001A94                          1112  
+00001A94                          1113  
+00001A94                          1114  
+00001A94                          1115  
+00001A94                          1116  
+00001A94                          1117  
+00001A94                          1118  
+00001A94                          1119  
+00001A94                          1120  
+00001A94                          1121  
+00001A94                          1122  
+00001A94                          1123  -------------------- end include --------------------
+00001A94                          1124      Include     "Title.X68"
+00001A94                          1125  
+00001A94                          1126  initTitleScreen
+00001A94                          1127  
+00001A94                          1128      ; turn off key board echo
+00001A94  103C 000C               1129      move.b  #ENABLE_ECHO,d0
+00001A98  123C 0000               1130      move.b  #0, d1 ; disable echo
+00001A9C  4E4F                    1131      trap    #15
+00001A9E                          1132  
+00001A9E                          1133      ; get the bit map we're rendering 
+00001A9E  43F9 002736B0           1134      lea     Title, a1
+00001AA4  2F09                    1135      move.l  a1, -(sp)
+00001AA6                          1136      ; starting top left corner of chunk
+00001AA6  303C 0000               1137      move.w  #000, d0 ; x
+00001AAA  E188                    1138      lsl.l     #$8, d0
+00001AAC  E188                    1139      lsl.l     #$8, d0
+00001AAE  303C 0000               1140      move.w  #000, d0 ; y
+00001AB2  2F00                    1141      move.l  d0, -(sp)
+00001AB4                          1142      
+00001AB4                          1143      ; set the width and height of what we want to render
+00001AB4  2F3C 00000280           1144      move.l  #SCREEN_WIDTH,-(sp) ; d3 = width of chunk
+00001ABA  2F3C 000002AC           1145      move.l  #684,-(sp) ; d4 = chunk height
+00001AC0                          1146      
+00001AC0  2F3C 00000000           1147      move.l  #$00000000,-(sp) ; d5 = where to display
+00001AC6  2F29 001C               1148      move.l  $1c(a1),-(sp) ; d6 = 32/24 bit color
+00001ACA                          1149  
+00001ACA  4EB9 00002102           1150      jsr     displayChunk
+00001AD0  DFFC 00000018           1151      add.l   #24, sp
+00001AD6                          1152      
+00001AD6                          1153  
+00001AD6                          1154      
+00001AD6  4E75                    1155      rts
+00001AD8                          1156      
+00001AD8                          1157      
+00001AD8                          1158  getStartKey
+00001AD8  4EB8 12BA               1159      jsr     updateTimeVariables
+00001ADC  2039 0000266E           1160      move.l  DeltaTime, d0
+00001AE2  2239 00002672           1161      move.l  DripTimer, d1
+00001AE8  D280                    1162      add.l   d0, d1
+00001AEA  23C1 00002672           1163      move.l  d1, DripTimer
+00001AF0  B280                    1164      cmp.l   d0, d1
+00001AF2  6D00 00E6               1165      blt     dontDrip
+00001AF6                          1166      
+00001AF6                          1167      ; drip
+00001AF6  4281                    1168      clr.l   d1
+00001AF8  23C1 00002672           1169      move.l  d1, DripTimer ; reset the drip timer
+00001AFE                          1170      
+00001AFE                          1171      ; draw black square to cover up last drip
+00001AFE  2238 0000               1172      move.l  $00000000, d1 ; put black into d1
+00001B02  103C 0050               1173      move.b  #SET_PEN_COLOR, d0
+00001B06  4E4F                    1174      trap    #15
+00001B08  103C 0051               1175      move.b  #SET_FILL_COLOR, d0
+00001B0C  4E4F                    1176      trap    #15 ; set fill and pen to black
+00001B0E  103C 0057               1177      move.b  #DRAW_RECT,d0
+00001B12  323C 00FC               1178      move.w  #DRIP_X, d1
+00001B16  343C 0198               1179      move.w  #DRIP_Y+1,d2
+00001B1A  4243                    1180      clr.w   d3
+00001B1C  4244                    1181      clr.w   d4
+00001B1E  0643 000C               1182      add.w   #DRIP_W, d3
+00001B22  0644 0018               1183      add.w   #DRIP_H,d4
+00001B26  D641                    1184      add.w   d1, d3
+00001B28  D842                    1185      add.w   d2, d4
+00001B2A  4E4F                    1186      trap    #15
+00001B2C                          1187  
+00001B2C  3039 00002676           1188      move.w  DripSwitch, d0
+00001B32  0C40 0000               1189      cmpi.w  #0, d0
+00001B36  6600 0054               1190      bne     shortDrip
+00001B3A                          1191      
+00001B3A                          1192      ; rerender 
+00001B3A  43F9 0041EEE8           1193      lea     Title2, a1
+00001B40  2F09                    1194      move.l  a1, -(sp)
+00001B42                          1195      ; starting top left corner of chunk
+00001B42  303C 00FC               1196      move.w  #DRIP_X, d0 ; x
+00001B46  E188                    1197      lsl.l     #$8, d0
+00001B48  E188                    1198      lsl.l     #$8, d0
+00001B4A  303C 0197               1199      move.w  #DRIP_Y, d0 ; y
+00001B4E  2F00                    1200      move.l  d0, -(sp)
+00001B50                          1201      
+00001B50                          1202      ; set the width and height of what we want to render
+00001B50  2F3C 0000000C           1203      move.l  #DRIP_W,-(sp) ; d3 = width of chunk
+00001B56  2F3C 00000018           1204      move.l  #DRIP_H,-(sp) ; d4 = chunk height
+00001B5C                          1205      
+00001B5C  303C 00FC               1206      move.w  #DRIP_X, d0 ; x
+00001B60  E188                    1207      lsl.l     #$8, d0
+00001B62  E188                    1208      lsl.l     #$8, d0
+00001B64  303C 0197               1209      move.w  #DRIP_Y, d0 ; y
+00001B68  2F00                    1210      move.l  d0, -(sp)
+00001B6A  2F29 001C               1211      move.l  $1c(a1),-(sp) ; d6 = 32/24 bit color
+00001B6E                          1212  
+00001B6E  4EB9 00002102           1213      jsr     displayChunk
+00001B74  DFFC 00000018           1214      add.l   #24, sp
+00001B7A  33FC 0001 00002676      1215      move.w  #1, DripSwitch
+00001B82  103C 005E               1216      move.b  #DRAW_BUFFER, D0
+00001B86  4E4F                    1217      trap    #15
+00001B88  6000 0050               1218      bra     dontDrip
+00001B8C                          1219      
+00001B8C                          1220  shortDrip
+00001B8C  43F9 002736B0           1221          lea     Title, a1
+00001B92  2F09                    1222      move.l  a1, -(sp)
+00001B94                          1223      ; starting top left corner of chunk
+00001B94  303C 00FC               1224      move.w  #DRIP_X, d0 ; x
+00001B98  E188                    1225      lsl.l     #$8, d0
+00001B9A  E188                    1226      lsl.l     #$8, d0
+00001B9C  303C 0197               1227      move.w  #DRIP_Y, d0 ; y
+00001BA0  2F00                    1228      move.l  d0, -(sp)
+00001BA2                          1229      
+00001BA2                          1230      ; set the width and height of what we want to render
+00001BA2  2F3C 0000000C           1231      move.l  #DRIP_W,-(sp) ; d3 = width of chunk
+00001BA8  2F3C 00000018           1232      move.l  #DRIP_H,-(sp) ; d4 = chunk height
+00001BAE                          1233      
+00001BAE  303C 00FC               1234      move.w  #DRIP_X, d0 ; x
+00001BB2  E188                    1235      lsl.l     #$8, d0
+00001BB4  E188                    1236      lsl.l     #$8, d0
+00001BB6  303C 0197               1237      move.w  #DRIP_Y, d0 ; y
+00001BBA  2F00                    1238      move.l  d0, -(sp)
+00001BBC  2F29 001C               1239      move.l  $1c(a1),-(sp) ; d6 = 32/24 bit color
+00001BC0                          1240  
+00001BC0  4EB9 00002102           1241      jsr     displayChunk
+00001BC6  DFFC 00000018           1242      add.l   #24, sp
+00001BCC  103C 005E               1243      move.b  #DRAW_BUFFER, D0
+00001BD0  4E4F                    1244      trap    #15
+00001BD2  33FC 0000 00002676      1245      move.w  #0, DripSwitch
+00001BDA                          1246      
+00001BDA                          1247  dontDrip
+00001BDA  103C 0005               1248      move.b  #READ_CHAR, d0
+00001BDE  4E4F                    1249      trap    #15
+00001BE0  0C01 0065               1250      cmpi.b   #101, d1
+00001BE4  6600 FEF2               1251      bne     GetStartKey
+00001BE8  4E75                    1252      rts
+00001BEA                          1253  
+00001BEA                          1254  
+00001BEA                          1255  
+00001BEA                          1256  
+00001BEA                          1257  -------------------- end include --------------------
+00001BEA                          1258      Include     "Enemy.X68"
+00001BEA                          1259  
+00001BEA                          1260  updateEnemy
+00001BEA  4EB9 00001DFA           1261      jsr     enemyPlayerCollide
+00001BF0  4EB9 00001C9C           1262      jsr     invalEnemy
+00001BF6  4E75                    1263      rts
+00001BF8                          1264  
+00001BF8                          1265  initEnemy
+00001BF8                          1266      ; get the bit map we're rendering 
+00001BF8  41F9 0054EB58           1267      lea     Enemy_bmp, a0
+00001BFE                          1268      
+00001BFE  43F9 00843AB2           1269      lea     EnemyStart, a1
+00001C04  45F9 00843B08           1270      lea     EnemyEnd, a2
+00001C0A  5489                    1271      adda.l  #$2, a1
+00001C0C                          1272      
+00001C0C  264A                    1273      move.l  a2, a3 ; figure out the num of enemies 
+00001C0E  97C9                    1274      suba.l  a1, a3 ; diff in addresses
+00001C10  260B                    1275      move.l  a3, d3
+00001C12  87FC 000E               1276      divs.w  #ENEMY_STRUCT_SIZE, d3 ; get num of enemies 
+00001C16  33C3 00843AB0           1277      move.w  d3, AliveEnemies
+00001C1C                          1278      
+00001C1C                          1279  initEnemyLoop
+00001C1C  2F09                    1280      move.l  a1, -(sp)
+00001C1E  2F0A                    1281      move.l  a2, -(sp)
+00001C20                          1282      
+00001C20  2F08                    1283      move.l  a0, -(sp)
+00001C22                          1284      ; starting top left corner of chunk
+00001C22  303C 0000               1285      move.w  #000, d0 ; x
+00001C26  E188                    1286      lsl.l     #$8, d0
+00001C28  E188                    1287      lsl.l     #$8, d0
+00001C2A  303C 0000               1288      move.w  #000, d0 ; y
+00001C2E  2F00                    1289      move.l  d0, -(sp)
+00001C30                          1290  
+00001C30                          1291      ; set the width and height of what we want to render
+00001C30  2F3C 00000022           1292      move.l  #ENEMY_WIDTH,-(sp) ; d3 = width of chunk
+00001C36  2F3C 0000001A           1293      move.l  #ENEMY_HEIGHT,-(sp) ; d4 = chunk height
+00001C3C                          1294  
+00001C3C  3029 0000               1295      move.w  ENEMY_X(a1),d0
+00001C40  3229 0002               1296      move.w  ENEMY_Y(a1),d1
+00001C44  4840                    1297      swap    d0
+00001C46  3001                    1298      move.w  d1, d0
+00001C48  2F00                    1299      move.l  d0, -(sp) ; where to draw it
+00001C4A  2F28 001C               1300      move.l  $1c(a0),-(sp) ; d6 = 32/24 bit color
+00001C4E  4EB9 00002102           1301      jsr     displayChunk
+00001C54  DFFC 00000018           1302      add.l   #24, sp
+00001C5A                          1303      
+00001C5A  245F                    1304      move.l  (sp)+,a2
+00001C5C  225F                    1305      move.l  (sp)+,a1
+00001C5E                          1306      
+00001C5E  337C 0003 0004          1307      move.w  #ENEMY_START_HP, ENEMY_HP(a1)
+00001C64                          1308      
+00001C64                          1309      ; start the state timer at a random number 
+00001C64  4EB9 000020C6           1310      jsr     getRandomLongIntoD6
+00001C6A                          1311      
+00001C6A  4846                    1312      swap    d6 ; clear the upper word
+00001C6C  3C3C 0000               1313      move.w  #0, d6
+00001C70  4846                    1314      swap    d6
+00001C72                          1315      
+00001C72  3A3C 0320               1316      move.w  #ENEMY_STATE_INTERVAL, d5
+00001C76  8DC5                    1317      divs.w  d5, d6 ; mod for enemy state interval to get it in range
+00001C78  4846                    1318      swap    d6 ; put the remainder in the lw 
+00001C7A                          1319      
+00001C7A  4846                    1320      swap    d6 ; clear the upper word
+00001C7C  3C3C 0000               1321      move.w  #0, d6
+00001C80  4846                    1322      swap    d6
+00001C82                          1323      
+00001C82  3346 000C               1324      move.w  d6, ENEMY_STATE_TIMER(a1)
+00001C86                          1325      
+00001C86  D3FC 0000000E           1326      add.l   #ENEMY_STRUCT_SIZE, a1
+00001C8C  B5C9                    1327      cmp.l   a1, a2
+00001C8E  668C                    1328      bne     initEnemyLoop
+00001C90                          1329      
+00001C90                          1330  finishInitEnemy
+00001C90                          1331      
+00001C90  23FC 00000000 00843B0A  1332      move.l  #0, EnemyToRedraw
+00001C9A                          1333      
+00001C9A  4E75                    1334      rts
+00001C9C                          1335      
+00001C9C                          1336  invalEnemy
+00001C9C  2C39 0000266E           1337      move.l  DeltaTime, d6
+00001CA2                          1338      
+00001CA2  43F9 00843AB2           1339      lea     EnemyStart, a1
+00001CA8  5489                    1340      adda.l  #$2, a1
+00001CAA  45F9 00843B08           1341      lea     EnemyEnd, a2
+00001CB0                          1342      
+00001CB0                          1343  invalEnemyLoop
+00001CB0                          1344      * check if hp == 0 but enemy is registered as dead
+00001CB0                          1345      *skip if enemy is dead
+00001CB0  3229 0004               1346      move.w  ENEMY_HP(a1),d1 ; get curr enemy hp
+00001CB4  0C01 0000               1347      cmpi.b  #0, d1
+00001CB8  6600 0012               1348      bne     checkEnemyHurt
+00001CBC                          1349      ; now we know that the enemy is dead, check fresh or old
+00001CBC  3229 000A               1350      move.w  ENEMY_STATE(a1),d1
+00001CC0  0C01 0003               1351      cmpi.b  #ENEMY_DEAD, d1 ; is enemy noted as dead?
+00001CC4  6600 006E               1352      bne     killEnemy              ; if enemy is not noted as dead, update and redraw enemy 
+00001CC8  6700 0090               1353      beq     continueInvalEnemyLoop ; if enemy is noted as dead, skip state update etc
+00001CCC                          1354  checkEnemyHurt
+00001CCC  3A29 000C               1355      move.w  ENEMY_STATE_TIMER(a1),d5
+00001CD0  3229 000A               1356      move.w  ENEMY_STATE(a1),d1
+00001CD4  0C01 0001               1357      cmpi.b  #ENEMY_HURT, d1
+00001CD8  6600 000E               1358      bne     increaseEnemyStateTimer
+00001CDC  0C45 0000               1359      cmpi.w  #0, d5
+00001CE0  6600 0006               1360      bne     increaseEnemyStateTimer
+00001CE4  6000 003E               1361      bra     enterEnemyHurtState
+00001CE8                          1362  increaseEnemyStateTimer
+00001CE8  3229 000A               1363      move.w  ENEMY_STATE(a1),d1
+00001CEC  3A29 000C               1364      move.w  ENEMY_STATE_TIMER(a1),d5
+00001CF0  DA46                    1365      add.w   d6, d5 ; add delta time to the timer 
+00001CF2  3345 000C               1366      move.w  d5, ENEMY_STATE_TIMER(a1)
+00001CF6  0C45 0000               1367      cmpi.w  #0, d5 ; overflow check
+00001CFA  6D00 000A               1368      blt     updateEnemyState
+00001CFE  0C45 0320               1369      cmpi.w  #ENEMY_STATE_INTERVAL, d5 ; check if timer is done and state should change
+00001D02  6D00 0056               1370      blt     continueInvalEnemyLoop
+00001D06                          1371  updateEnemyState
+00001D06                          1372      ; timer is up, update the state
+00001D06  4245                    1373      clr.w   d5
+00001D08  3345 000C               1374      move.w  d5, ENEMY_STATE_TIMER(a1) ; reset the state timer
+00001D0C  3229 000A               1375      move.w  ENEMY_STATE(a1),d1
+00001D10  0C41 0002               1376      cmpi.w  #ENEMY_ATTACK, d1
+00001D14  6700 0036               1377      beq     updateEnemyStateIdle ; if enemy is attacking, switch to idle
+00001D18                          1378      ; switch from idle/hurt to attacking
+00001D18  323C 0002               1379      move.w  #ENEMY_ATTACK, d1
+00001D1C  3341 000A               1380      move.w  d1, ENEMY_STATE(a1)
+00001D20  6000 0032               1381      bra     updateEnemySprite
+00001D24                          1382      
+00001D24                          1383  enterEnemyHurtState
+00001D24                          1384      ; start the timer at whatever value it needs to start at 
+00001D24  303C 0320               1385      move.w  #ENEMY_STATE_INTERVAL, d0
+00001D28  0440 0032               1386      subi.w  #ENEMY_HURT_INTERVAL, d0
+00001D2C  3340 000C               1387      move.w  d0, ENEMY_STATE_TIMER(a1)
+00001D30  6000 0022               1388      bra     updateEnemySprite
+00001D34                          1389      
+00001D34                          1390  killEnemy
+00001D34  337C 0003 000A          1391      move.w  #ENEMY_DEAD, ENEMY_STATE(a1) ; note enemy as dead
+00001D3A  3039 00843AB0           1392      move.w  AliveEnemies, d0
+00001D40  5340                    1393      subi.w  #1, d0
+00001D42  33C0 00843AB0           1394      move.w  d0, AliveEnemies ; decrease the number of alive enemies
+00001D48  6000 000A               1395      bra     updateEnemySprite            ; update sprite to be dead
+00001D4C                          1396      
+00001D4C                          1397  updateEnemyStateIdle
+00001D4C  323C 0000               1398      move.w  #ENEMY_IDLE, d1
+00001D50  3341 000A               1399      move.w  d1, ENEMY_STATE(a1)
+00001D54                          1400  
+00001D54                          1401  updateEnemySprite
+00001D54  4EB9 00001D68           1402      jsr     drawEnemy
+00001D5A                          1403  
+00001D5A                          1404  continueInvalEnemyLoop
+00001D5A  D3FC 0000000E           1405      adda.l  #ENEMY_STRUCT_SIZE, a1
+00001D60  B5C9                    1406      cmp.l   a1, a2
+00001D62  6600 FF4C               1407      bne     invalEnemyLoop
+00001D66                          1408  
+00001D66  4E75                    1409      rts
+00001D68                          1410      
+00001D68                          1411      
+00001D68                          1412  drawEnemy
+00001D68  2F09                    1413      move.l  a1, -(sp)
+00001D6A                          1414      
+00001D6A                          1415      * INVAL W HILLS
+00001D6A  47F9 00002678           1416      lea     Hills, a3
+00001D70  2F0B                    1417      move.l  a3, -(sp)
+00001D72                          1418      ; starting top left corner of chunk
+00001D72  3029 0000               1419      move.w     ENEMY_X(a1),d0
+00001D76  3229 0002               1420      move.w     ENEMY_Y(a1),d1
+00001D7A  E188                    1421      lsl.l     #$8, d0
+00001D7C  E188                    1422      lsl.l     #$8, d0
+00001D7E  3001                    1423      move.w  d1, d0
+00001D80  2F00                    1424      move.l  d0, -(sp)
+00001D82                          1425      
+00001D82                          1426      ; set the width and height of what we want to render
+00001D82  2F3C 00000022           1427      move.l  #ENEMY_WIDTH,-(sp) ; d3 = width of chunk
+00001D88  2F3C 0000001A           1428      move.l  #ENEMY_HEIGHT,-(sp) ; d4 = chunk height
+00001D8E                          1429      
+00001D8E  3029 0000               1430      move.w  ENEMY_X(a1),d0 ; x
+00001D92  3229 0002               1431      move.w  ENEMY_Y(a1),d1 ; y
+00001D96  E188                    1432      lsl.l     #$8, d0
+00001D98  E188                    1433      lsl.l     #$8, d0
+00001D9A  3001                    1434      move.w  d1, d0
+00001D9C  2F00                    1435      move.l  d0, -(sp) ; where to draw it
+00001D9E  2F2B 001C               1436      move.l  $1c(a3),-(sp) ; d6 = 32/24 bit color
+00001DA2  4EB9 00002102           1437      jsr     displayChunk
+00001DA8  DFFC 00000018           1438      add.l   #24, sp
+00001DAE  2257                    1439      move.l  (sp),a1
+00001DB0                          1440      
+00001DB0  47F9 0054EB58           1441      lea     Enemy_bmp, a3
+00001DB6  2F0B                    1442      move.l  a3, -(sp)
+00001DB8                          1443      ; calculate the starting x by multiplying state * width
+00001DB8                          1444      ; each sprite is evenly spaced and aligns w/ state index
+00001DB8  3229 000A               1445      move.w  ENEMY_STATE(a1),d1
+00001DBC  C2FC 0022               1446      mulu.w  #ENEMY_WIDTH, d1 
+00001DC0  3001                    1447      move.w  d1, d0 ; x
+00001DC2  E188                    1448      lsl.l     #$8, d0
+00001DC4  E188                    1449      lsl.l     #$8, d0
+00001DC6  303C 0000               1450      move.w  #000, d0 ; y
+00001DCA  2F00                    1451      move.l  d0, -(sp)
+00001DCC                          1452  
+00001DCC                          1453      ; set the width and height of what we want to render
+00001DCC  2F3C 00000022           1454      move.l  #ENEMY_WIDTH,-(sp) ; d3 = width of chunk
+00001DD2  2F3C 0000001A           1455      move.l  #ENEMY_HEIGHT,-(sp) ; d4 = chunk height
+00001DD8                          1456  
+00001DD8  3029 0000               1457      move.w  ENEMY_X(a1),d0 ; x
+00001DDC  3229 0002               1458      move.w  ENEMY_Y(a1),d1 ; y
+00001DE0  4840                    1459      swap    d0
+00001DE2  3001                    1460      move.w  d1, d0
+00001DE4  2F00                    1461      move.l  d0, -(sp) ; where to draw it
+00001DE6  2F2B 001C               1462      move.l  $1c(a3),-(sp) ; d6 = 32/24 bit color
+00001DEA  4EB9 00002102           1463      jsr     displayChunk
+00001DF0  DFFC 00000018           1464      add.l   #24, sp
+00001DF6  225F                    1465      move.l  (sp)+,a1
+00001DF8  4E75                    1466      rts
+00001DFA                          1467      
+00001DFA                          1468  
+00001DFA                          1469  enemyPlayerCollide
+00001DFA  43F9 00843AB2           1470      lea     EnemyStart, a1
+00001E00  5489                    1471      adda.l  #$2, a1
+00001E02  45F9 00843B08           1472      lea     EnemyEnd, a2
+00001E08                          1473  
+00001E08                          1474  enemyPlayerCollideLoop
+00001E08  41F9 00002628           1475      lea     Knight,a0
+00001E0E  2F02                    1476      move.l  d2,-(sp) ; put x velocity as parameter
+00001E10  2F09                    1477      move.l  a1,-(sp) ; move enemy address on stack
+00001E12  2F28 0004               1478      move.l  KNIGHT_YPOS(a0),-(sp) ; move knight y pos on stack
+00001E16  2F28 0000               1479      move.l  KNIGHT_XPOS(a0),-(sp) ; move knight x pos on stack
+00001E1A                          1480      
+00001E1A  4EB9 00001E78           1481      jsr     enemyCollide ; check for ceiling above
+00001E20                          1482      
+00001E20  241F                    1483      move.l  (sp)+,d2
+00001E22  261F                    1484      move.l  (sp)+,d3
+00001E24  508F                    1485      add.l   #8, sp ; compensate for address put on sp
+00001E26  BE3C 0000               1486      cmp.b   #0, d7 ; did player and enemy collide
+00001E2A  6700 0010               1487      beq     enemyPlayerCollision ; leave loop if collided
+00001E2E  D3FC 0000000E           1488      adda.l  #ENEMY_STRUCT_SIZE, a1
+00001E34  B5C9                    1489      cmp.l   a1, a2 
+00001E36  66D0                    1490      bne     enemyPlayerCollideLoop
+00001E38  6000 0022               1491      bra     noEnemyPlayerCollision
+00001E3C                          1492      
+00001E3C                          1493  enemyPlayerCollision
+00001E3C  23C9 00843B0A           1494      move.l  a1, EnemyToRedraw
+00001E42  3E3C 0001               1495      move.w  #1, d7 ; set flag so update enemy knows enemy will need to be re rendered 
+00001E46  3029 000A               1496      move.w  ENEMY_STATE(a1), d0
+00001E4A  0C40 0002               1497      cmpi.w  #ENEMY_ATTACK, d0
+00001E4E  6600 0014               1498      bne     returnEnemyPlayerCollide ; the enemy and player collided while enemy was not attacking
+00001E52  4EB9 00001E66           1499      jsr     hurtPlayer
+00001E58  6000 000A               1500      bra     returnEnemyPlayerCollide
+00001E5C                          1501  noEnemyPlayerCollision
+00001E5C  4287                    1502      clr.l   d7
+00001E5E  23C7 00843B0A           1503      move.l  d7, EnemyToRedraw
+00001E64                          1504  returnEnemyPlayerCollide
+00001E64  4E75                    1505      rts
+00001E66                          1506      
+00001E66                          1507      
+00001E66                          1508  hurtPlayer
+00001E66  41F9 00002628           1509      lea     Knight,a0
+00001E6C  3028 0010               1510      move.w  KNIGHT_HP(a0),d0
+00001E70  5340                    1511      subi.w  #1, d0
+00001E72  3140 0010               1512      move.w  d0, KNIGHT_HP(a0)
+00001E76  4E75                    1513      rts
+00001E78                          1514      
+00001E78                          1515      
+00001E78                          1516      
+00001E78                          1517      
+00001E78                          1518      
+00001E78                          1519  enemyCollide
+00001E78  48E7 FF00               1520      movem.l D_REGS,-(sp) ; preserve all registers
+00001E7C                          1521  
+00001E7C  202F 0024               1522      move.l  36(sp),d0 ; d0 is this x/left 
+00001E80  222F 0028               1523      move.l  40(sp),d1 ; d1 is this y/top
+00001E84  226F 002C               1524      move.l  44(sp),a1 ; a1 = address of other
+00001E88                          1525      
+00001E88  4840                    1526      swap    d0
+00001E8A  4841                    1527      swap    d1 ; put x and y into lower word to cut off floating points
+00001E8C  4846                    1528      swap    d6
+00001E8E                          1529      
+00001E8E                          1530       ; if(this.right >= other.left)
+00001E8E  0640 0013               1531      add.w   #KNIGHT_HB_W, d0 ; d0 = this.right
+00001E92  3629 0000               1532      move.w  ENEMY_X(a1),d3 ; d3 = other.left
+00001E96  B043                    1533      cmp     d3, d0 ; branch if d0 < d3
+00001E98  6D00 FB72               1534      blt     noCollisionFound
+00001E9C                          1535      
+00001E9C                          1536  enemyCollideLeft
+00001E9C                          1537      ; if this.left <= other.right
+00001E9C                          1538      ; d0 = this.left
+00001E9C  3629 0000               1539      move.w  ENEMY_X(a1),d3 ; d3 = other.left
+00001EA0  3829 0006               1540      move.w  ENEMY_W(a1),d4
+00001EA4  D644                    1541      add.w   d4, d3 ; d3 = other.right
+00001EA6  0440 0013               1542      subi.w  #KNIGHT_HB_W, d0 ; d0 = this.left
+00001EAA  B043                    1543      cmp.w   d3, d0 
+00001EAC  6E00 FB5E               1544      bgt     noCollisionFound
+00001EB0                          1545      
+00001EB0                          1546  enemyCollideTopOverlap
+00001EB0                          1547      ; if this.top >= other.top
+00001EB0                          1548          ; if this.top <= other.bottom
+00001EB0  3629 0002               1549      move.w  ENEMY_Y(a1),d3 ; d3 = other.top
+00001EB4  B243                    1550      cmp     d3, d1 ; this top >= other.top?
+00001EB6  6D00 0012               1551      blt     enemyCollideBottomOverlap
+00001EBA  3829 0008               1552      move.w  ENEMY_H(a1),d4
+00001EBE  D644                    1553      add.w   d4, d3
+00001EC0  B243                    1554      cmp     d3, d1 ; this top <= other.bottom??
+00001EC2  6E00 0006               1555      bgt     enemyCollideBottomOverlap
+00001EC6  6000 FB36               1556      bra     collisionFound
+00001ECA                          1557  
+00001ECA                          1558  enemyCollideBottomOverlap
+00001ECA                          1559      ; this.bottom >= other.top
+00001ECA                          1560          ; this.bottom <= other.bottom
+00001ECA  3629 0002               1561      move.w  ENEMY_Y(a1),d3 ; d3 = other.top
+00001ECE  41F9 00002628           1562      lea     Knight, a0
+00001ED4  3A01                    1563      move.w  d1,d5
+00001ED6  0645 0020               1564      addi.w  #KNIGHT_HEIGHT,d5 ; d5 = this.bottom
+00001EDA  BA43                    1565      cmp     d3, d5 ; bottom>= top?
+00001EDC  6D00 FB2E               1566      blt     noCollisionFound
+00001EE0  3829 0008               1567      move.w  ENEMY_H(a1),d4
+00001EE4  D644                    1568      add.w   d4, d3 ; d3 = other.bottom
+00001EE6  BA43                    1569      cmp     d3, d5 ; this bottom <= other.bottom??
+00001EE8  6E00 FB22               1570      bgt     noCollisionFound
+00001EEC  6000 FB10               1571      bra     collisionFound
+00001EF0                          1572  
+00001EF0                          1573  
+00001EF0                          1574  
+00001EF0                          1575  
+00001EF0                          1576  
+00001EF0                          1577  
+00001EF0                          1578  
+00001EF0                          1579  
+00001EF0                          1580  
+00001EF0                          1581  
+00001EF0                          1582  
+00001EF0                          1583  
+00001EF0                          1584  
+00001EF0                          1585  
+00001EF0                          1586  
+00001EF0                          1587  
+00001EF0                          1588  -------------------- end include --------------------
+00001EF0                          1589      Include     "Easel.X68"
+00001EF0                          1590  
+00001EF0                          1591  checkEasel
+00001EF0  3039 00843AB0           1592      move.w  AliveEnemies, d0
+00001EF6  0C40 0000               1593      cmpi.w  #0, d0
+00001EFA  6600 005E               1594      bne     checkEaselFalse ; there are still enemies alive, do nothing
+00001EFE                          1595      
+00001EFE                          1596      ; now to put the player on the stack
+00001EFE  2F3C 00000020           1597      move.l  #KNIGHT_HEIGHT,-(sp)
+00001F04  2F3C 00000013           1598      move.l  #KNIGHT_HB_W,-(sp)
+00001F0A                          1599      
+00001F0A  41F9 00002628           1600      lea     Knight, a0
+00001F10  2028 0004               1601      move.l  KNIGHT_YPOS(a0),d0
+00001F14  E088                    1602      lsr.l   #$8, d0
+00001F16  E088                    1603      lsr.l   #$8, d0
+00001F18  2F00                    1604      move.l  d0,-(sp)
+00001F1A  2028 0000               1605      move.l  KNIGHT_XPOS(a0),d0
+00001F1E  E088                    1606      lsr.l   #$8,d0
+00001F20  E088                    1607      lsr.l   #$8,d0
+00001F22  2F00                    1608      move.l  d0,-(sp)
+00001F24                          1609      
+00001F24  2F3C 0000001F           1610      move.l  #EASEL_H,-(sp)
+00001F2A  2F3C 00000019           1611      move.l  #EASEL_W,-(sp)
+00001F30  2F3C 0000013D           1612      move.l  #EASEL_Y,-(sp)
+00001F36  2F3C 0000013C           1613      move.l  #EASEL_X,-(sp)
+00001F3C                          1614      
+00001F3C  4EB9 00001F5C           1615      jsr     collide
+00001F42  DFFC 00000020           1616      add.l   #$20, sp
+00001F48                          1617      
+00001F48  BE7C 0000               1618      cmp.w   #0, d7 
+00001F4C  6700 000C               1619      beq     checkEaselFalse ;if didn't collide w player, return
+00001F50                          1620  
+00001F50  33FC 0003 00002668      1621      move.w      #GAME_WON, GameState
+00001F58  4E75                    1622      rts
+00001F5A                          1623      
+00001F5A                          1624  checkEaselFalse 
+00001F5A  4E75                    1625      rts
+00001F5C                          1626  
+00001F5C                          1627  
+00001F5C                          1628  -------------------- end include --------------------
+00001F5C                          1629      Include     "CollisionDetection.X68"
+00001F5C                          1630  
+00001F5C                          1631  
+00001F5C                          1632  collide
+00001F5C  48E7 FF00               1633      movem.l D_REGS,-(sp)
+00001F60  DFFC 00000024           1634      add.l   #36, sp
+00001F66                          1635      
+00001F66                          1636      ; get all the variables from the stack
+00001F66  2017                    1637      move.l  (sp),d0 ; x1
+00001F68  222F 0004               1638      move.l  4(sp),d1 ; y1
+00001F6C  242F 0008               1639      move.l  8(sp),d2 ; w1
+00001F70  262F 000C               1640      move.l  12(sp),d3 ; h1
+00001F74                          1641      
+00001F74  282F 0010               1642      move.l  16(sp),d4 ; x2
+00001F78  2A2F 0014               1643      move.l  20(sp),d5 ; y2
+00001F7C  2C2F 0018               1644      move.l  24(sp),d6 ; w2
+00001F80  2E2F 001C               1645      move.l  28(sp),d7 ; h2
+00001F84  9FFC 00000024           1646      sub.l   #36, sp
+00001F8A                          1647      
+00001F8A  D440                    1648      add.w   d0, d2 ; d2 = right edge 1
+00001F8C  D641                    1649      add.w   d1, d3 ; d3 = bottom edge 1
+00001F8E                          1650      
+00001F8E  DC44                    1651      add.w   d4, d6 ; d6 = right edge 2
+00001F90  DE45                    1652      add.w   d5, d7 ; d7 = bottom edge 2
+00001F92                          1653      
+00001F92                          1654  collideYAxisTop
+00001F92                          1655      ; check if top edge is between other top and bottom
+00001F92                          1656      ; start by checking if y1 > y2, top 1 is under top 2
+00001F92  B245                    1657      cmp.w   d5, d1
+00001F94  6D00 000C               1658      blt     collideYAxisBottom
+00001F98                          1659      ; next check that y1 < b2 (bottom of obj 2), top 1 is above bottom 2
+00001F98  B247                    1660      cmp.w   d7, d1
+00001F9A  6E00 0006               1661      bgt     collideYAxisBottom
+00001F9E  6000 0012               1662      bra     collideXAxisLeft
+00001FA2                          1663  
+00001FA2                          1664  collideYAxisBottom
+00001FA2                          1665      ; check if bottom edge is between other top and bottom
+00001FA2                          1666      ; start by checking b1 > y2, bottom 1 is under top 2 
+00001FA2  B645                    1667      cmp.w   d5, d3
+00001FA4  6D00 002C               1668      blt     noCollision
+00001FA8                          1669      ; next check that b1 < b2, bottom 1 is above bottom 2
+00001FA8  B647                    1670      cmp.w   d7, d3
+00001FAA  6E00 0026               1671      bgt     noCollision
+00001FAE  6000 0002               1672      bra     collideXAxisLeft
+00001FB2                          1673  collideXAxisLeft
+00001FB2                          1674      ; check that the left edge is between other left and right
+00001FB2                          1675      ; start by checking x1 > x2 
+00001FB2  B044                    1676      cmp.w   d4, d0
+00001FB4  6D00 000C               1677      blt     collideXAxisRight
+00001FB8                          1678      ; next check that x1 < r2
+00001FB8  B046                    1679      cmp.w   d6, d0
+00001FBA  6E00 0006               1680      bgt     collideXAxisRight
+00001FBE  6000 001A               1681      bra     collision 
+00001FC2                          1682  
+00001FC2                          1683  collideXAxisRight
+00001FC2                          1684      ; check that the right edge is between other left and right
+00001FC2                          1685      ; start by checking r1 > x2
+00001FC2  B444                    1686      cmp.w   d4, d2
+00001FC4  6D00 000C               1687      blt     noCollision
+00001FC8                          1688      ; next check that r1 < r2
+00001FC8  B446                    1689      cmp.w   d6, d2
+00001FCA  6E00 0006               1690      bgt     noCollision
+00001FCE  6000 000A               1691      bra     collision
+00001FD2                          1692      
+00001FD2                          1693  noCollision    
+00001FD2  4CDF 00FF               1694      movem.l (sp)+,D_REGS
+00001FD6  7E00                    1695      move.l  #0, d7
+00001FD8  4E75                    1696      rts
+00001FDA                          1697  collision
+00001FDA  4CDF 00FF               1698      movem.l (sp)+,D_REGS
+00001FDE  7E01                    1699      move.l  #1, d7
+00001FE0  4E75                    1700      rts
+00001FE2                          1701      
+00001FE2                          1702  -------------------- end include --------------------
+00001FE2                          1703      Include     "Math.X68"
+00001FE2                          1704  
+00001FE2                          1705  
+00001FE2                          1706  multiply
+00001FE2  0C86 00000000           1707      cmpi.l  #0, d6
+00001FE8  6700 0018               1708      beq     return_zero
+00001FEC  2F06                    1709      move.l  d6,-(sp)
+00001FEE  2C7C 00000000           1710      move.l  #$00000000, a6
+00001FF4  5386                    1711      subi.l  #1, d6
+00001FF6                          1712  mul_loop
+00001FF6  DDC7                    1713      adda.l   d7, a6
+00001FF8  51CE FFFC               1714      dbra    d6, mul_loop
+00001FFC  2E0E                    1715      move.l  a6, d7
+00001FFE  2C1F                    1716      move.l  (sp)+,d6
+00002000  4E75                    1717      rts
+00002002                          1718  return_zero
+00002002  7E00                    1719      move.l  #0, d7
+00002004  4E75                    1720      rts
+00002006                          1721  
+00002006                          1722  ; d7 = number to be clamped
+00002006                          1723  ; (sp) min number
+00002006                          1724  ; 4(sp) max number  
+00002006                          1725  clamp
+00002006  2F00                    1726      move.l  d0, -(sp)
+00002008  202F 0008               1727      move.l  8(sp),d0 ; min number
+0000200C  BE80                    1728      cmp.l   d0, d7
+0000200E                          1729      ; if d7 < d0(min) then return min in d7
+0000200E  6E00 0008               1730      bgt     clampCompareMax
+00002012  2E00                    1731      move.l  d0, d7
+00002014  6000 000E               1732      bra     returnClamp
+00002018                          1733  clampCompareMax
+00002018  202F 000C               1734      move.l  12(sp),d0 ; max number
+0000201C  BE80                    1735      cmp.l   d0, d7
+0000201E                          1736      ; if d7 > d0(max) then return max in d7
+0000201E  6D00 0004               1737      blt     returnClamp
+00002022  2E00                    1738      move.l  d0, d7
+00002024                          1739  returnClamp
+00002024  201F                    1740      move.l  (sp)+, d0
+00002026  4E75                    1741      rts
+00002028                          1742      
+00002028                          1743  
+00002028                          1744  littleToBigEnd
+00002028  E05F                    1745      ror.w   #$08, d7
+0000202A  4847                    1746      swap    d7
+0000202C  E05F                    1747      ror.w   #$08, d7
+0000202E  4E75                    1748      rts
+00002030                          1749      
+00002030                          1750  
+00002030                          1751  
+00002030                          1752  -------------------- end include --------------------
+00002030                          1753      Include     "RandomNumbers.X68"
+00002030                          1754  
+00002030                          1755  ALL_REG                 REG     D0-D7/A0-A6
+00002030                          1756  
+00002030  =00000008               1757  GET_TIME_COMMAND        equ     8
+00002030                          1758  
+00002030  4EB9 00002074           1759          jsr     seedRandomNumber
+00002036  4286                    1760      clr.l   d6
+00002038  4EB9 0000208C           1761          jsr     getRandomByteIntoD6
+0000203E  4286                    1762      clr.l   d6
+00002040  4EB9 0000208C           1763          jsr     getRandomByteIntoD6
+00002046  4286                    1764      clr.l   d6
+00002048  4EB9 0000208C           1765          jsr     getRandomByteIntoD6
+0000204E  4286                    1766      clr.l   d6
+00002050  4EB9 0000208C           1767          jsr     getRandomByteIntoD6
+00002056  4286                    1768      clr.l   d6
+00002058  4EB9 0000208C           1769          jsr     getRandomByteIntoD6
+0000205E  4286                    1770      clr.l   d6
+00002060  4EB9 0000208C           1771          jsr     getRandomByteIntoD6
+00002066  4286                    1772      clr.l   d6
+00002068  4EB9 000020C6           1773          jsr     getRandomLongIntoD6
+0000206E                          1774          
+0000206E  103C 0009               1775          move.b  #9,d0
+00002072  4E4F                    1776          TRAP    #15
+00002074                          1777  
+00002074                          1778  
+00002074                          1779  
+00002074                          1780  seedRandomNumber
+00002074  48E7 FFFE               1781          movem.l ALL_REG,-(sp)           ;; What does this do?
+00002078  4286                    1782          clr.l   d6
+0000207A  103C 0008               1783          move.b  #GET_TIME_COMMAND,d0    ;; What if you used the same seed?
+0000207E  4E4F                    1784          TRAP    #15
+00002080                          1785  
+00002080  23C1 000020FA           1786          move.l  d1,RANDOMVAL
+00002086  4CDF 7FFF               1787          movem.l (sp)+,ALL_REG
+0000208A  4E75                    1788          rts
+0000208C                          1789  
+0000208C                          1790  getRandomByteIntoD6
+0000208C  48E7 8000               1791          movem.l d0,-(sp)
+00002090  48E7 4000               1792          movem.l d1,-(sp)
+00002094  48E7 2000               1793          movem.l d2,-(sp)
+00002098  2039 000020FA           1794          move.l  RANDOMVAL,d0
+0000209E  72AF                    1795          moveq   #$AF-$100,d1
+000020A0  7412                    1796          moveq   #18,d2
+000020A2                          1797  Ninc0   
+000020A2  D080                    1798      add.l   d0,d0
+000020A4  6400 0004               1799      bcc Ninc1
+000020A8  B300                    1800      eor.b   d1,d0
+000020AA                          1801  Ninc1
+000020AA  51CA FFF6               1802      dbf d2,Ninc0
+000020AE                          1803      
+000020AE  23C0 000020FA           1804      move.l  d0,RANDOMVAL
+000020B4  4286                    1805      clr.l   d6
+000020B6  1C00                    1806      move.b  d0,d6
+000020B8                          1807      
+000020B8  4CDF 0004               1808          movem.l (sp)+,d2
+000020BC  4CDF 0002               1809          movem.l (sp)+,d1
+000020C0  4CDF 0001               1810          movem.l (sp)+,d0
+000020C4  4E75                    1811          rts
+000020C6                          1812          
+000020C6                          1813  
+000020C6                          1814  getRandomLongIntoD6
+000020C6  48E7 FFFE               1815          movem.l ALL_REG,-(sp)
+000020CA  4EB8 208C               1816          jsr     getRandomByteIntoD6
+000020CE  1A06                    1817          move.b  d6,d5
+000020D0  4EB8 208C               1818          jsr     getRandomByteIntoD6
+000020D4  E18D                    1819          lsl.l   #8,d5
+000020D6  1A06                    1820          move.b  d6,d5
+000020D8  4EB8 208C               1821          jsr     getRandomByteIntoD6
+000020DC  E18D                    1822          lsl.l   #8,d5
+000020DE  1A06                    1823          move.b  d6,d5
+000020E0  4EB8 208C               1824          jsr     getRandomByteIntoD6
+000020E4  E18D                    1825          lsl.l   #8,d5
+000020E6  1A06                    1826          move.b  d6,d5
+000020E8  23C5 000020FE           1827          move.l  d5,TEMPRANDOMLONG
+000020EE  4CDF 7FFF               1828          movem.l (sp)+,ALL_REG
+000020F2  2C39 000020FE           1829          move.l  TEMPRANDOMLONG,d6
+000020F8  4E75                    1830          rts
+000020FA                          1831  
+000020FA                          1832  
+000020FA                          1833  RANDOMVAL       ds.l    1
+000020FE                          1834  TEMPRANDOMLONG  ds.l    1
+00002102                          1835  
+00002102                          1836  
+00002102                          1837  -------------------- end include --------------------
+00002102                          1838      Include     "ChunkRender.X68"
+00002102                          1839  
+00002102                          1840  
+00002102                          1841  
+00002102                          1842  
+00002102                          1843  
+00002102                          1844  
+00002102                          1845  ; init
+00002102                          1846  
+00002102                          1847     
+00002102                          1848  displayChunk
+00002102  48E7 FF00               1849      movem.l D_REGS,-(sp) ; put everything on the stack
+00002106                          1850      ;add.l   #32, sp
+00002106  DFFC 00000024           1851      add.l   #36, sp ; add an offset of the d regs + pc counter
+0000210C  3C17                    1852      move.w  (sp),d6 ; bit color size
+0000210E  4285                    1853      clr.l   d5
+00002110  2A2F 0004               1854      move.l  4(sp),d5 ; where to display chunk on screen
+00002114  282F 0008               1855      move.l  8(sp),d4 ; chunk height
+00002118  262F 000C               1856      move.l  12(sp),d3 ; chunk width
+0000211C  242F 0010               1857      move.l  16(sp),d2 ; starting coordinate of chunk
+00002120  206F 0014               1858      move.l  20(sp),a0 ; pointer to chunk
+00002124                          1859  
+00002124                          1860      ; change chunk pointer to pixel data
+00002124  2E28 000A               1861      move.l  $A(a0),d7
+00002128  2248                    1862      move.l  a0, a1
+0000212A                          1863      ; put pixel address in big endian 
+0000212A  4847                    1864      swap    d7
+0000212C  E09F                    1865      ror.l   #$08,d7 ; d7 = pixel data offset
+0000212E  D3C7                    1866      adda.l  d7, a1
+00002130                          1867      ; moving sp back
+00002130  9FFC 00000024           1868      sub.l  #36, sp
+00002136                          1869      
+00002136                          1870      * set color flag
+00002136                          1871      ; put color size into little end
+00002136  E05E                    1872      ror.w   #$8, d6
+00002138                          1873      ; set d6 to be color flag
+00002138                          1874      ; 0 - 24 bit color
+00002138                          1875      ; 2 - 32 bit color
+00002138  0C46 0020               1876      cmpi.w  #32, d6
+0000213C  6700 00BE               1877      beq     displayChunk32
+00002140  4246                    1878      clr     d6
+00002142  1C3C 0003               1879      move.b  #3, d6 ; will later be used for multiplication based on byte size of color
+00002146  6000 0008               1880      bra     aroundSetFlag32bit
+0000214A                          1881  setFlag32bit
+0000214A  4246                    1882      clr     d6
+0000214C  1C3C 0004               1883      move.b  #4, d6
+00002150                          1884  aroundSetFlag32bit
+00002150                          1885      
+00002150                          1886      
+00002150                          1887      * increase color pointer based on starting point
+00002150                          1888      ; do the y increase
+00002150  4281                    1889      clr.l   d1
+00002152  D242                    1890      add.w   d2,d1 ; d1 = y start
+00002154  D244                    1891      add.w   d4,d1
+00002156  2E28 0016               1892      move.l  $16(a0),d7 ; d7 = bmp h
+0000215A  4EB8 2028               1893      jsr     littleToBigEnd
+0000215E  9E81                    1894      sub.l   d1, d7 ; d7 = bmp h - (y start + chunk h)
+00002160  2207                    1895      move.l  d7, d1
+00002162                          1896      
+00002162  2E28 0012               1897      move.l  $12(a0),d7 ; d7 = bmp w 
+00002166  4EB8 2028               1898      jsr     littleToBigEnd
+0000216A  C346                    1899      exg     d1, d6
+0000216C  4EB8 1FE2               1900      jsr     multiply ; d7 = bmp w * y start
+00002170  C346                    1901      exg     d1, d6
+00002172  4EB8 1FE2               1902      jsr multiply  ; d7 = bmp w * y start * 3|4
+00002176  D3C7                    1903      adda.l  d7, a1
+00002178                          1904      
+00002178                          1905      
+00002178                          1906      
+00002178                          1907      ; do the x increase
+00002178  4287                    1908      clr.l     d7
+0000217A  2C47                    1909      move.l  d7, a6
+0000217C  4842                    1910      swap    d2 ; put x into lower word
+0000217E  3E02                    1911      move.w  d2, d7 ; d7 = chunk start x  
+00002180  4EB8 1FE2               1912      jsr     multiply
+00002184  D3C7                    1913      adda.l  d7, a1
+00002186                          1914      ;PICK UP HERE, FINISH X AND Y INCREASE AND MULTIPLY FUNC
+00002186                          1915      
+00002186                          1916      ; break d5 into x and y register
+00002186  3405                    1917      move.w  d5, d2
+00002188  D484                    1918      add.l   d4, d2
+0000218A  4845                    1919      swap    d5
+0000218C  3205                    1920      move.w  d5, d1 ; d5 will hold the x reset value
+0000218E  4845                    1921      swap    d5
+00002190  3A01                    1922      move.w  d1, d5
+00002192  5383                    1923      subi.l  #1, d3 ; compensate for dbra
+00002194  5384                    1924      subi.l  #1, d4
+00002196                          1925      
+00002196                          1926  displayChunkRow
+00002196                          1927     ; move.w  d1, d5 ; temp store d1 in d4 so d1 can be used for color
+00002196                          1928      * set the pen color
+00002196                          1929      ; select processing based on color size and index
+00002196  0C06 0004               1930      cmpi.b  #4, d6
+0000219A  6700 0016               1931      beq     get32bColor
+0000219E                          1932      
+0000219E                          1933  get24bColor
+0000219E  1219                    1934      move.b  (a1)+,d1
+000021A0  E149                    1935      lsl.w   #$8, d1
+000021A2  1219                    1936      move.b  (a1)+,d1
+000021A4  E189                    1937      lsl.l   #$8, d1
+000021A6  1219                    1938      move.b  (a1)+,d1
+000021A8                          1939      
+000021A8  0281 00FFFFFF           1940      andi.l  #$00FFFFFF, d1
+000021AE  6000 0010               1941      bra     setPenColor
+000021B2                          1942  get32bColor
+000021B2  2219                    1943      move.l  (a1)+,d1
+000021B4  E089                    1944      lsr.l   #$8, d1
+000021B6  0C81 00FFFFFF           1945      cmpi.l  #$00FFFFFF, d1
+000021BC  6700 0010               1946      beq     increaseChunkRow ; skip the draw if alpha
+000021C0                          1947  
+000021C0                          1948  setPenColor
+000021C0  103C 0050               1949      move.b  #SET_PEN_COLOR, d0
+000021C4  4E4F                    1950      trap    #15
+000021C6                          1951  
+000021C6                          1952      ; d5 = x y pos
+000021C6                          1953      ; d3 = num x loops
+000021C6                          1954      ; d4 = num y loops
+000021C6  3205                    1955      move.w  d5, d1 ; undo temp storage
+000021C8  103C 0052               1956      move.b  #DRAW_PIXEL, d0
+000021CC  4E4F                    1957      trap    #15
+000021CE                          1958      ; drew pixel
+000021CE                          1959  increaseChunkRow
+000021CE                          1960      ; increment x 
+000021CE  5245                    1961      addi.w  #1, d5
+000021D0  51CB FFC4               1962      dbra    d3, displayChunkRow
+000021D4                          1963      
+000021D4                          1964      ; done with row, reset row vars and increment y stuff
+000021D4  5342                    1965      subi.w  #1, d2 ; increase y pos
+000021D6  4845                    1966      swap    d5
+000021D8  3205                    1967      move.w  d5, d1 ; reset x pos
+000021DA  4845                    1968      swap    d5
+000021DC  3A01                    1969      move.w  d1, d5
+000021DE  262F 0030               1970      move.l  48(sp),d3 ; reset x loops to chunk width
+000021E2                          1971      ; increase color pointer by bmp width - chunk width
+000021E2  2E28 0012               1972      move.l  $12(a0),d7 ; d7 = bmp width
+000021E6  4EB8 2028               1973      jsr     littleToBigEnd
+000021EA  9E83                    1974      sub.l   d3, d7 ; d7 = bmp width - chunk width
+000021EC  CEC6                    1975      mulu.w  d6, d7 ; d7 = d7 * color byte size
+000021EE  D3C7                    1976      adda.l  d7, a1
+000021F0                          1977      
+000021F0  5383                    1978      subi.l  #1, d3 ; compensate for dbra offset
+000021F2  51CC FFA2               1979      dbra    d4, displayChunkRow
+000021F6                          1980      
+000021F6  4CDF 00FF               1981      movem.l (sp)+,D_REGS
+000021FA  4E75                    1982      rts
+000021FC                          1983  
+000021FC                          1984  displayChunk32
+000021FC                          1985  
+000021FC  4246                    1986      clr     d6
+000021FE  1C3C 0004               1987      move.b  #4, d6
+00002202                          1988      
+00002202                          1989      * increase color pointer based on starting point
+00002202                          1990      ; do the y increase
+00002202  4281                    1991      clr.l   d1
+00002204  D242                    1992      add.w   d2,d1 ; d1 = y start
+00002206  D244                    1993      add.w   d4,d1
+00002208  2E28 0016               1994      move.l  $16(a0),d7 ; d7 = bmp h
+0000220C  4EB8 2028               1995      jsr     littleToBigEnd
+00002210  9E81                    1996      sub.l   d1, d7 ; d7 = bmp h - (y start + chunk h)
+00002212  2207                    1997      move.l  d7, d1
+00002214                          1998      
+00002214  2E28 0012               1999      move.l  $12(a0),d7 ; d7 = bmp w 
+00002218  4EB8 2028               2000      jsr     littleToBigEnd
+0000221C  C346                    2001      exg     d1, d6
+0000221E  4EB8 1FE2               2002      jsr     multiply ; d7 = bmp w * y start
+00002222  C346                    2003      exg     d1, d6
+00002224  4EB8 1FE2               2004      jsr multiply  ; d7 = bmp w * y start * 3|4
+00002228  D3C7                    2005      adda.l  d7, a1
+0000222A                          2006      
+0000222A                          2007      ; do the x increase
+0000222A  4287                    2008      clr.l     d7
+0000222C  2C47                    2009      move.l  d7, a6
+0000222E  4842                    2010      swap    d2 ; put x into lower word
+00002230  3E02                    2011      move.w  d2, d7 ; d7 = chunk start x  
+00002232  4EB8 1FE2               2012      jsr     multiply
+00002236  D3C7                    2013      adda.l  d7, a1
+00002238                          2014      ;PICK UP HERE, FINISH X AND Y INCREASE AND MULTIPLY FUNC
+00002238                          2015      
+00002238                          2016      ; break d5 into x and y register
+00002238  3405                    2017      move.w  d5, d2
+0000223A  D484                    2018      add.l   d4, d2
+0000223C  4845                    2019      swap    d5
+0000223E  3205                    2020      move.w  d5, d1 ; d5 will hold the x reset value
+00002240  4845                    2021      swap    d5
+00002242  3A01                    2022      move.w  d1, d5
+00002244  5383                    2023      subi.l  #1, d3 ; compensate for dbra
+00002246  5384                    2024      subi.l  #1, d4
+00002248  2C3C 00FFFFFF           2025      move.l  #$00ffffff, d6
+0000224E  3E3C 0001               2026      move.w  #1,d7
+00002252                          2027  displayChunkRow32
+00002252  2219                    2028      move.l  (a1)+,d1
+00002254  E089                    2029      lsr.l   #$8, d1
+00002256  B246                    2030      cmp.w  d6, d1 ; check if the color is pure white
+00002258  6700 0010               2031      beq     increaseChunkRow32 ; skip the draw if alpha
+0000225C                          2032  
+0000225C  103C 0050               2033      move.b  #SET_PEN_COLOR, d0
+00002260  4E4F                    2034      trap    #15
+00002262                          2035  
+00002262                          2036      ; d5 = x y pos
+00002262                          2037      ; d3 = num x loops
+00002262                          2038      ; d4 = num y loops
+00002262  3205                    2039      move.w  d5, d1 ; undo temp storage
+00002264  103C 0052               2040      move.b  #DRAW_PIXEL, d0
+00002268  4E4F                    2041      trap    #15
+0000226A                          2042      ; drew pixel
+0000226A                          2043  increaseChunkRow32
+0000226A                          2044      ; increment x 
+0000226A  DA47                    2045      add.w   d7, d5
+0000226C  51CB FFE4               2046      dbra    d3, displayChunkRow32
+00002270                          2047      
+00002270                          2048      ; done with row, reset row vars and increment y stuff
+00002270  5342                    2049      subi.w  #1, d2 ; increase y pos
+00002272  4845                    2050      swap    d5
+00002274  3205                    2051      move.w  d5, d1 ; reset x pos
+00002276  4845                    2052      swap    d5
+00002278  3A01                    2053      move.w  d1, d5
+0000227A  262F 0030               2054      move.l  48(sp),d3 ; reset x loops to chunk width
+0000227E                          2055      ; increase color pointer by bmp width - chunk width
+0000227E  2E28 0012               2056      move.l  $12(a0),d7 ; d7 = bmp width
+00002282  4EB8 2028               2057      jsr     littleToBigEnd
+00002286  9E83                    2058      sub.l   d3, d7 ; d7 = bmp width - chunk width
+00002288  CEFC 0004               2059      mulu.w  #4, d7 ; d7 = d7 * color byte size
+0000228C  D3C7                    2060      adda.l  d7, a1
+0000228E                          2061      
+0000228E  5383                    2062      subi.l  #1, d3 ; compensate for dbra offset
+00002290  3E3C 0001               2063      move.w  #1, d7
+00002294  51CC FFBC               2064      dbra    d4, displayChunkRow32
+00002298                          2065      
+00002298  4CDF 00FF               2066      movem.l (sp)+,D_REGS
+0000229C  4E75                    2067      rts
+0000229E                          2068  
+0000229E                          2069  
+0000229E                          2070  
+0000229E                          2071  
+0000229E                          2072  
+0000229E                          2073  
+0000229E                          2074  
+0000229E                          2075  
+0000229E                          2076  
+0000229E                          2077  
+0000229E                          2078  
+0000229E                          2079  
+0000229E                          2080  
+0000229E                          2081  
+0000229E                          2082  
+0000229E                          2083  
+0000229E                          2084  
+0000229E                          2085  
+0000229E                          2086  
+0000229E                          2087  
+0000229E                          2088  
+0000229E                          2089  -------------------- end include --------------------
+0000229E                          2090      Include     "BackgroundRenderer.X68"
+0000229E                          2091  
+0000229E                          2092  initBackground
+0000229E                          2093      ; get the bit map we're rendering 
+0000229E  43F9 00002678           2094      lea     Hills, a1
+000022A4  2F09                    2095      move.l  a1, -(sp)
+000022A6                          2096      ; starting top left corner of chunk
+000022A6  303C 0000               2097      move.w  #000, d0 ; x
+000022AA  E188                    2098      lsl.l     #$8, d0
+000022AC  E188                    2099      lsl.l     #$8, d0
+000022AE  303C 0000               2100      move.w  #000, d0 ; y
+000022B2  2F00                    2101      move.l  d0, -(sp)
+000022B4                          2102      
+000022B4                          2103      ; set the width and height of what we want to render
+000022B4  2F3C 00000280           2104      move.l  #SCREEN_WIDTH,-(sp) ; d3 = width of chunk
+000022BA  2F3C 000003E8           2105      move.l  #SCREEN_HEIGHT,-(sp) ; d4 = chunk height
+000022C0                          2106      
+000022C0  2F3C 00000000           2107      move.l  #$00000000,-(sp) ; d5 = where to display
+000022C6  2F29 001C               2108      move.l  $1c(a1),-(sp) ; d6 = 32/24 bit color
+000022CA                          2109  
+000022CA  4EB8 2102               2110      jsr     displayChunk
+000022CE  DFFC 00000018           2111      add.l   #24, sp
+000022D4                          2112      
+000022D4  33FC 8700 00002652      2113      move.w  #SKY_R_START, SkyColorR
+000022DC  33FC E700 00002654      2114      move.w  #SKY_G_START, SkyColorG
+000022E4  33FC EB00 00002656      2115      move.w  #SKY_B_START, SkyColorB    
+000022EC  4EB9 00002432           2116      jsr     drawSkyInit
+000022F2                          2117      
+000022F2  223C 00009EFA           2118      move.l  #SUN_COLOR, d1
+000022F8  103C 0050               2119      move.b  #SET_PEN_COLOR, d0
+000022FC  4E4F                    2120      trap    #15
+000022FE                          2121  
+000022FE  103C 0051               2122      move.b  #SET_FILL_COLOR,d0
+00002302  4E4F                    2123      trap    #15
+00002304                          2124      
+00002304  4281                    2125      clr.l   d1
+00002306  4287                    2126      clr.l   d7
+00002308  103C 0058               2127      move.b  #DRAW_CIRCLE,d0
+0000230C  3C3C 001E               2128      move.w  #SUN_SIZE, d6
+00002310  323C 0280               2129      move.w  #SCREEN_WIDTH,d1
+00002314  E289                    2130      lsr.l   #$1, d1 ; d1 = x, halfway point
+00002316  3E06                    2131      move.w  d6, d7
+00002318  E28F                    2132      lsr.l   #$1, d7 
+0000231A  9287                    2133      sub.l   d7, d1 ; d1 = x - sun_w/2
+0000231C                          2134      
+0000231C  3601                    2135      move.w  d1, d3
+0000231E  0683 0000001E           2136      add.l   #SUN_SIZE, d3 ; d3 = right edge 
+00002324                          2137      
+00002324                          2138      ; calculate y pos
+00002324  23FC 00000000 00002664  2139      move.l  #0, SunYPos
+0000232E  2439 00002664           2140      move.l  SunYPos, d2
+00002334  3802                    2141      move.w  d2, d4
+00002336  0644 001E               2142      addi.w  #SUN_SIZE,d4
+0000233A  4E4F                    2143      trap    #15
+0000233C                          2144      
+0000233C  4E75                    2145      rts
+0000233E                          2146  
+0000233E                          2147      
+0000233E                          2148  updateBackground
+0000233E                          2149      ; draw and update the sky 
+0000233E  4EB9 000024EC           2150      jsr     drawSky
+00002344  4EB9 0000234C           2151      jsr     updateSun
+0000234A  4E75                    2152      rts
+0000234C                          2153  
+0000234C                          2154  
+0000234C                          2155  updateSun
+0000234C  4EB9 00002376           2156      jsr     drawSun
+00002352  4EB9 0000235A           2157      jsr     checkSunset ; is it sunset?
+00002358  4E75                    2158      rts
+0000235A                          2159      
+0000235A                          2160  checkSunset
+0000235A  2039 00002664           2161      move.l  SunYPos, d0
+00002360  4840                    2162      swap    d0
+00002362  0C40 0114               2163      cmpi.w  #HILLTOP_BOT, d0
+00002366  6700 0004               2164      beq     sunsetEndGame
+0000236A  4E75                    2165      rts
+0000236C                          2166  sunsetEndGame
+0000236C  33FC 0002 00002668      2167      move.w  #SUNSET_LOST, GameState
+00002374  4E75                    2168      rts
+00002376                          2169  
+00002376                          2170  drawSun
+00002376                          2171      ; draw the sun  
+00002376  223C 00009EFA           2172      move.l  #SUN_COLOR, d1
+0000237C  103C 0050               2173      move.b  #SET_PEN_COLOR, d0
+00002380  4E4F                    2174      trap    #15
+00002382                          2175  
+00002382  103C 0051               2176      move.b  #SET_FILL_COLOR,d0
+00002386  4E4F                    2177      trap    #15
+00002388                          2178      
+00002388  4281                    2179      clr.l   d1
+0000238A  4287                    2180      clr.l   d7
+0000238C  103C 0058               2181      move.b  #DRAW_CIRCLE,d0
+00002390  3C3C 001E               2182      move.w  #SUN_SIZE, d6
+00002394  323C 027F               2183      move.w  #SCREEN_WIDTH-1,d1
+00002398  E289                    2184      lsr.l   #$1, d1 ; d1 = x, halfway point
+0000239A  3E06                    2185      move.w  d6, d7
+0000239C  E28F                    2186      lsr.l   #$1, d7 
+0000239E  9287                    2187      sub.l   d7, d1 ; d1 = x - sun_w/2
+000023A0                          2188      
+000023A0  3601                    2189      move.w  d1, d3
+000023A2  0683 0000001E           2190      add.l   #SUN_SIZE, d3 ; d3 = right edge 
+000023A8                          2191      
+000023A8                          2192      ; calculate y pos 
+000023A8  2439 00002664           2193      move.l  SunYPos, d2
+000023AE  2A39 0000266E           2194      move.l  DeltaTime, d5 
+000023B4  CAFC 1194               2195      mulu.w  #SUN_SPEED, d5
+000023B8  D485                    2196      add.l   d5, d2 
+000023BA  23C2 00002664           2197      move.l  d2, SunYPos
+000023C0  4842                    2198      swap    d2
+000023C2  3802                    2199      move.w  d2, d4
+000023C4  0644 001E               2200      addi.w  #SUN_SIZE,d4
+000023C8                          2201      
+000023C8  4E4F                    2202      trap    #15
+000023CA                          2203      
+000023CA                          2204     
+000023CA                          2205      ; add the hills on top
+000023CA                          2206          ; start by invaling 
+000023CA  43F9 00002678           2207      lea     Hills, a1
+000023D0  2F09                    2208      move.l  a1, -(sp)
+000023D2                          2209      ; starting top left corner of chunk
+000023D2  4281                    2210      clr.l   d1
+000023D4  323C 027F               2211      move.w  #SCREEN_WIDTH-1,d1
+000023D8  0481 0000001E           2212      subi.l   #SUN_SIZE,d1 ; d1 = x - sun_w
+000023DE  E289                    2213      lsr.l   #$1, d1 ; d1 = x/2,halfway point
+000023E0                          2214      
+000023E0  3001                    2215      move.w  d1, d0 ; x
+000023E2  E188                    2216      lsl.l     #$8, d0
+000023E4  E188                    2217      lsl.l     #$8, d0
+000023E6  2239 00002664           2218      move.l  SunYPos, d1
+000023EC  4841                    2219      swap    d1
+000023EE  5341                    2220      subi.w  #1, d1
+000023F0  3001                    2221      move.w  d1, d0 ; y
+000023F2                          2222  
+000023F2  2F00                    2223      move.l  d0, -(sp)
+000023F4                          2224      
+000023F4                          2225      ; set the width and height of what we want to render
+000023F4  2F3C 0000001F           2226      move.l  #SUN_SIZE+1,-(sp) ; d3 = width of chunk
+000023FA  2F3C 0000001F           2227      move.l  #SUN_SIZE+1,-(sp) ; d4 = chunk height
+00002400                          2228      
+00002400  4281                    2229      clr.l   d1
+00002402  323C 027F               2230      move.w  #SCREEN_WIDTH-1,d1
+00002406  0481 0000001E           2231      subi.l   #SUN_SIZE,d1 ; d1 = x - sun_w
+0000240C  E289                    2232      lsr.l   #$1, d1 ; d1 = x/2,halfway point
+0000240E                          2233      
+0000240E  3001                    2234      move.w  d1, d0 ; x
+00002410  E188                    2235      lsl.l     #$8, d0
+00002412  E188                    2236      lsl.l     #$8, d0
+00002414  2239 00002664           2237      move.l  SunYPos, d1
+0000241A  4841                    2238      swap    d1
+0000241C  5341                    2239      subi.w  #1, d1
+0000241E  3001                    2240      move.w  d1, d0 ; y
+00002420  2F00                    2241      move.l  d0, -(sp)
+00002422  2F29 001C               2242      move.l  $1c(a1),-(sp) ; d6 = 32/24 bit color
+00002426                          2243  
+00002426  4EB8 2102               2244      jsr     displayChunk
+0000242A  DFFC 00000018           2245      add.l   #24, sp
+00002430                          2246      
+00002430  4E75                    2247      rts
+00002432                          2248      
+00002432                          2249  drawSkyInit
+00002432  3239 00002656           2250      move.w  SkyColorB, d1
+00002438  0C41 00C1               2251      cmpi.w  #$00C1, d1 ; magic number, replace 
+0000243C  6E00 00C6               2252      bgt     gIncrement
+00002440  0441 0018               2253      subi.w  #SKY_CHANGER, d1
+00002444  33C1 00002656           2254      move.w  d1, SkyColorB
+0000244A                          2255  
+0000244A                          2256  gIncrementInit
+0000244A  E189                    2257      lsl.l   #$8, d1 
+0000244C  3239 00002654           2258      move.w  SkyColorG, d1
+00002452  0C41 0061               2259      cmpi.w  #$0061, d1
+00002456  6E00 00C6               2260      bgt     rIncrement
+0000245A  0441 0018               2261      subi.w  #SKY_CHANGEG, d1
+0000245E  33C1 00002654           2262      move.w  d1, SkyColorG
+00002464                          2263  
+00002464                          2264  rIncrementInit
+00002464  E189                    2265      lsl.l   #$8, d1 
+00002466  3239 00002652           2266      move.w  SkyColorR, d1
+0000246C  0C41 FF9F               2267      cmpi.w  #$FF9F, d1
+00002470  6E00 00C6               2268      bgt     skyPenColor
+00002474  0641 0030               2269      add.w   #SKY_CHANGEB, d1
+00002478  33C1 00002652           2270      move.w  d1, SkyColorR
+0000247E                          2271  
+0000247E                          2272  skyPenColorInit
+0000247E  E089                    2273      lsr.l   #$8, d1 
+00002480  2E39 00002658           2274      move.l  LastSkyColor, d7
+00002486  23C1 00002658           2275      move.l  d1, LastSkyColor
+0000248C  103C 0050               2276      move.b  #SET_PEN_COLOR,d0
+00002490  4E4F                    2277      trap    #15
+00002492  103C 0051               2278      move.b  #SET_FILL_COLOR,d0
+00002496  4E4F                    2279      trap    #15
+00002498                          2280      
+00002498                          2281      ; draw the rect down to the top edge of the hills
+00002498  323C 0000               2282      move.w  #0, d1 ;LX
+0000249C  343C 0000               2283      move.w  #0, d2 ;UY
+000024A0  363C 0280               2284      move.w  #SCREEN_WIDTH, d3 ; RX
+000024A4  383C 0108               2285      move.w  #HILLTOP_TOP+1, d4 ;BY
+000024A8  103C 0057               2286      move.b  #DRAW_RECT,d0
+000024AC  4E4F                    2287      trap    #15
+000024AE                          2288      
+000024AE                          2289      
+000024AE  43F9 008435AE           2290      lea     SkyEdgeLocation, a1 ; prepare address so we can add the loc for top of hill in
+000024B4  7200                    2291      move.l  #0, d1 ; d1 = x pos
+000024B6  2A3C 00000280           2292      move.l  #SCREEN_WIDTH, d5 ; d4 = x loops
+000024BC  7E00                    2293      move.l  #0, d7 ; we're checking for black (no black = hill start)
+000024BE                          2294  findSkyEdgeXloop
+000024BE  243C 00000109           2295      move.l  #HILLTOP_TOP+2, d2 ; d2 = y startpos 
+000024C4                          2296  findSkyEdgeYLoop
+000024C4  103C 0053               2297      move.b  #GET_PIXEL_COLOR, d0
+000024C8  4E4F                    2298      trap    #15
+000024CA                          2299      
+000024CA  BE80                    2300      cmp.l   d0, d7 ; check color @ location == black
+000024CC  6600 0006               2301      bne     finishYFindEdgeLoop ; if hit hills, done w column
+000024D0                          2302      
+000024D0  5242                    2303      addi.w  #1, d2 ; didnt hit hills, increase y and continue
+000024D2  60F0                    2304      bra     findSkyEdgeYLoop
+000024D4                          2305  finishYFindEdgeLoop    
+000024D4  5342                    2306      subi.w  #1, d2
+000024D6  32C2                    2307      move.w  d2, (a1)+ ; add the new y pos to the data and increase the pointer
+000024D8                          2308      ; draw the line 
+000024D8  3601                    2309      move.w  d1, d3 ; x will be the same, make x2 = x1
+000024DA  383C 0109               2310      move.w  #HILLTOP_TOP+2, d4 ; d4 = start y 
+000024DE                          2311      ; drawing line from (d1, d2), hill edge, to (d3, d4), box edge
+000024DE  103C 0054               2312      move.b  #DRAW_LINE, d0
+000024E2  4E4F                    2313      trap    #15
+000024E4                          2314  
+000024E4                          2315      ; finished column, incrememnt x vars
+000024E4  5241                    2316      addi.w  #1, d1
+000024E6                          2317      
+000024E6  51CD FFD6               2318      dbra    d5, findSkyEdgeXloop
+000024EA                          2319  
+000024EA                          2320      
+000024EA  4E75                    2321      rts
+000024EC                          2322      
+000024EC                          2323      
+000024EC                          2324  drawSky
+000024EC  3239 00002656           2325      move.w  SkyColorB, d1
+000024F2  0C41 00C1               2326      cmpi.w  #$00C1, d1 ; magic number, fix
+000024F6  6E00 000C               2327      bgt     gIncrement
+000024FA  0441 0018               2328      subi.w  #SKY_CHANGER, d1
+000024FE  33C1 00002656           2329      move.w  d1, SkyColorB
+00002504                          2330  
+00002504                          2331  gIncrement
+00002504  E189                    2332      lsl.l   #$8, d1 
+00002506  3239 00002654           2333      move.w  SkyColorG, d1
+0000250C  0C41 0061               2334      cmpi.w  #$0061, d1
+00002510  6E00 000C               2335      bgt     rIncrement
+00002514  0441 0018               2336      subi.w  #SKY_CHANGEG, d1
+00002518  33C1 00002654           2337      move.w  d1, SkyColorG
+0000251E                          2338  
+0000251E                          2339  
+0000251E                          2340  rIncrement
+0000251E  E189                    2341      lsl.l   #$8, d1 
+00002520  3239 00002652           2342      move.w  SkyColorR, d1
+00002526  0C41 FF9F               2343      cmpi.w  #$FF9F, d1
+0000252A  6E00 000C               2344      bgt     skyPenColor
+0000252E  0641 0030               2345      add.w   #SKY_CHANGEB, d1
+00002532  33C1 00002652           2346      move.w  d1, SkyColorR
+00002538                          2347  
+00002538                          2348  
+00002538                          2349  
+00002538                          2350  skyPenColor
+00002538  E089                    2351      lsr.l   #$8, d1 
+0000253A  2E39 00002658           2352      move.l  LastSkyColor, d7
+00002540  23C1 00002658           2353      move.l  d1, LastSkyColor
+00002546  103C 0050               2354      move.b  #SET_PEN_COLOR,d0
+0000254A  4E4F                    2355      trap    #15
+0000254C  103C 0051               2356      move.b  #SET_FILL_COLOR,d0
+00002550  4E4F                    2357      trap    #15
+00002552                          2358      ; draw the rect
+00002552  323C 0000               2359      move.w  #0, d1 ;LX
+00002556  343C 0000               2360      move.w  #0, d2 ;UY
+0000255A  363C 0280               2361      move.w  #640, d3 ; RX
+0000255E  383C 0108               2362      move.w  #HILLTOP_TOP+1, d4 ;BY
+00002562  103C 0057               2363      move.b  #DRAW_RECT,d0
+00002566  4E4F                    2364      trap    #15
+00002568                          2365      
+00002568                          2366      
+00002568                          2367  
+00002568  7200                    2368      move.l  #0, d1 ; d1 = x pos
+0000256A  103C 0054               2369      move.b  #DRAW_LINE,d0
+0000256E  2A3C 00000280           2370      move.l  #SCREEN_WIDTH, d5 ; d4 = x loops
+00002574  43F9 008435AE           2371      lea     SkyEdgeLocation, a1
+0000257A  243C 00000109           2372      move.l  #HILLTOP_TOP+2, d2 ; d2 = y startpos, y1
+00002580                          2373  skyFillInXLoop
+00002580                          2374      
+00002580  3819                    2375      move.w  (a1)+, d4 ; bottom y pos, y2
+00002582  3601                    2376      move.w  d1, d3 ; x2 = x1
+00002584                          2377      
+00002584  4E4F                    2378      trap    #15
+00002586                          2379  
+00002586                          2380      ; finished column, reset y vars and incrememnt x vars
+00002586  5241                    2381      addi.w  #1, d1
+00002588                          2382      
+00002588  51CD FFF6               2383      dbra    d5, skyFillInXLoop
+0000258C                          2384      
+0000258C  227C 00000000           2385      move.l  #0, a1
+00002592                          2386      
+00002592  4E75                    2387      rts
+00002594                          2388  
+00002594                          2389  
+00002594                          2390  
+00002594                          2391  
+00002594                          2392  
+00002594                          2393  
+00002594                          2394  
+00002594                          2395  
+00002594                          2396  
+00002594                          2397  -------------------- end include --------------------
+00002594                          2398      Include     "Blocks.X68"
+00002594                          2399  
+00002594  =00000008               2400  BLOCK_DATA_SIZE     EQU 8 ; byte size of blocks
+00002594                          2401  
+00002594  =00000000               2402  BLOCK_X             equ 0 ; when accessing a pointer, these can be used as offsets 
+00002594  =00000002               2403  BLOCK_Y             equ 2
+00002594  =00000004               2404  BLOCK_W             equ 4
+00002594  =00000006               2405  BLOCK_H             equ 6
+00002594                          2406  
+00002594= 0000                    2407  BlockStart      dc.w    0
+00002596                          2408  
+00002596= 01C4                    2409  Block1          dc.w    $1c4 ; x
+00002598= 01B7                    2410                  dc.w    $1B7 ; y
+0000259A= 00A0                    2411                  dc.w    $A0 ; width
+0000259C= 0016                    2412                  dc.w    $16 ; height
+0000259E                          2413                  
+0000259E= 0011                    2414  Block2          dc.w    $11
+000025A0= 0194                    2415                  dc.w    $194
+000025A2= 00A0                    2416                  dc.w    $A0
+000025A4= 0015                    2417                  dc.w    $15
+000025A6                          2418                  
+000025A6= 00F2                    2419  Block3          dc.w    $F2
+000025A8= 015C                    2420                  dc.w    $15C
+000025AA= 00A5                    2421                  dc.w    $A5
+000025AC= 0014                    2422                  dc.w    $14
+000025AE                          2423                  
+000025AE= 010C                    2424  Block4          dc.w    $10C
+000025B0= 0239                    2425                  dc.w    $239
+000025B2= 00B5                    2426                  dc.w    $B5
+000025B4= 0016                    2427                  dc.w    $16
+000025B6                          2428  
+000025B6= 018C                    2429  Block4Step      dc.w    $18C
+000025B8= 024D                    2430                  dc.w    $24D
+000025BA= 0058                    2431                  dc.w    $58
+000025BC= 001A                    2432                  dc.w    $1A                
+000025BE                          2433  
+000025BE= 0093                    2434  Block5          dc.w    $93
+000025C0= 01E5                    2435                  dc.w    $1E5
+000025C2= 0075                    2436                  dc.w    $75
+000025C4= 0018                    2437                  dc.w    $18
+000025C6                          2438                  
+000025C6= 021D                    2439  Block6          dc.w    $21D
+000025C8= 025A                    2440                  dc.w    $25A
+000025CA= 0047                    2441                  dc.w    $47
+000025CC= 0020                    2442                  dc.w    $20
+000025CE                          2443  
+000025CE= 021D                    2444  Block6Chunk2    dc.w    $21D
+000025D0= 027A                    2445                  dc.w    $27A
+000025D2= 0047                    2446                  dc.w    $47
+000025D4= 0020                    2447                  dc.w    $20
+000025D6                          2448  
+000025D6= 021D                    2449  Block6Chunk3    dc.w    $21D
+000025D8= 029A                    2450                  dc.w    $29A
+000025DA= 0047                    2451                  dc.w    $47
+000025DC= 0020                    2452                  dc.w    $20
+000025DE                          2453  
+000025DE= 021D                    2454  Block6Chunk4    dc.w    $21D
+000025E0= 02BA                    2455                  dc.w    $2BA
+000025E2= 0047                    2456                  dc.w    $47
+000025E4= 0020                    2457                  dc.w    $20
+000025E6                          2458                  
+000025E6= 01A4                    2459  Block7          dc.w    $1A4
+000025E8= 02E5                    2460                  dc.w    $2E5
+000025EA= 0050                    2461                  dc.w    $50
+000025EC= 0011                    2462                  dc.w    $11
+000025EE                          2463                  
+000025EE= 0131                    2464  Block8          dc.w    $131
+000025F0= 02F5                    2465                  dc.w    $2F5
+000025F2= 0050                    2466                  dc.w    $50
+000025F4= 0011                    2467                  dc.w    $11
+000025F6                          2468                  
+000025F6= 00AF                    2469  Block9          dc.w    $AF
+000025F8= 0301                    2470                  dc.w    $301
+000025FA= 0050                    2471                  dc.w    $50
+000025FC= 0011                    2472                  dc.w    $11
+000025FE                          2473                  
+000025FE= 000C                    2474  Block10         dc.w    $C
+00002600= 0338                    2475                  dc.w    $338
+00002602= 005D                    2476                  dc.w    $5D
+00002604= 000F                    2477                  dc.w    $F
+00002606                          2478                  
+00002606= 002E                    2479  Block11         dc.w    $2E
+00002608= 037B                    2480                  dc.w    $37B
+0000260A= 0083                    2481                  dc.w    $83
+0000260C= 0014                    2482                  dc.w    $14
+0000260E                          2483                                  
+0000260E= 01A1                    2484  Block12         dc.w    $1A1
+00002610= 037C                    2485                  dc.w    $37C
+00002612= 00D1                    2486                  dc.w    $D1
+00002614= 0014                    2487                  dc.w    $14
+00002616                          2488  
+00002616                          2489  
+00002616= 0093                    2490  Block13         dc.w    $93
+00002618= 03CA                    2491                  dc.w    $3CA
+0000261A= 0146                    2492                  dc.w    $146
+0000261C= 001E                    2493                  dc.w    $1E
+0000261E                          2494                  
+0000261E= 0019                    2495  Block14         dc.w    $19
+00002620= 02A7                    2496                  dc.w    $2A7
+00002622= 0075                    2497                  dc.w    $75
+00002624= 0016                    2498                  dc.w    $16
+00002626                          2499  
+00002626= 0000                    2500  BlockEnd        dc.w    0                
+00002628                          2501  
+00002628                          2502  
+00002628                          2503  
+00002628                          2504  
+00002628                          2505  
+00002628                          2506  
+00002628                          2507  
+00002628                          2508  
+00002628                          2509  
+00002628                          2510  -------------------- end include --------------------
+00002628                          2511      Include     "Variables.X68"
+00002628                          2512  
+00002628                          2513  D_REGS       REG  D0-D7
+00002628                          2514  A_REGS       REG  A0-A7
+00002628                          2515  
+00002628  =00000005               2516  READ_CHAR        EQU 5
+00002628  =00000008               2517  GET_TIME        EQU 8
+00002628  =00000009               2518  TERMINATE       EQU 9
+00002628  =0000000C               2519  ENABLE_ECHO     EQU 12
+00002628  =00000013               2520  GET_4KEYS       EQU 19
+00002628  =0000003D               2521  GET_MOUSE       EQU 61
+00002628  =00000021               2522  SET_RESOLUTION  EQU 33
+00002628                          2523  
+00002628  =00000000               2524  READ_MOUSE_DOWN EQU 0
+00002628                          2525  
+00002628  =00000050               2526  SET_PEN_COLOR   EQU 80
+00002628  =00000051               2527  SET_FILL_COLOR  EQU 81
+00002628  =00000053               2528  GET_PIXEL_COLOR EQU 83
+00002628                          2529  
+00002628  =00000052               2530  DRAW_PIXEL      EQU 82
+00002628  =00000054               2531  DRAW_LINE       EQU 84
+00002628  =00000057               2532  DRAW_RECT       EQU 87
+00002628  =00000058               2533  DRAW_CIRCLE     EQU 88
+00002628                          2534  
+00002628  =0000005C               2535  SET_DRAW_MODE   EQU 92
+00002628  =0000005E               2536  DRAW_BUFFER     EQU 94
+00002628  =0000005F               2537  DRAW_TEXT       EQU 95
+00002628                          2538  
+00002628                          2539  
+00002628  =0000000C               2540  DRIP_W          EQU 12
+00002628  =00000018               2541  DRIP_H          EQU 24
+00002628  =000000FC               2542  DRIP_X          EQU 252
+00002628  =00000197               2543  DRIP_Y          EQU 407
+00002628  =000001F4               2544  DRIP_TIME_LENGTH    EQU     500
+00002628                          2545  
+00002628  =00000280               2546  SCREEN_WIDTH    EQU 640
+00002628  =000003E8               2547  SCREEN_HEIGHT   EQU 1000
+00002628                          2548  
+00002628  =00000018               2549  SKY_CHANGER     EQU 24
+00002628  =0000FF00               2550  SKY_STOPR       EQU 65280
+00002628                          2551  
+00002628  =00000030               2552  SKY_CHANGEB     EQU 48
+00002628  =00000054               2553  SKY_STOPB       EQU 84
+00002628                          2554  
+00002628  =00000018               2555  SKY_CHANGEG     EQU 24
+00002628  =00000054               2556  SKY_STOPG       EQU 84
+00002628                          2557  
+00002628  =0000013C               2558  EASEL_X         EQU 316
+00002628  =0000013D               2559  EASEL_Y         EQU 317
+00002628  =00000019               2560  EASEL_W         EQU 25
+00002628  =0000001F               2561  EASEL_H         EQU 31
+00002628                          2562  
+00002628  =00000020               2563  KNIGHT_HEIGHT   EQU 32
+00002628  =0000001E               2564  KNIGHT_WIDTH    EQU 30
+00002628  =00000013               2565  KNIGHT_HB_W     EQU 19
+00002628                          2566  
+00002628  =0000013F               2567  KNIGHT_STARTX   EQU 319
+00002628  =00000392               2568  KNIGHT_STARTY   EQU 914
+00002628  =00000003               2569  KNIGHT_STARTHP  EQU 3
+00002628                          2570  
+00002628  =00000000               2571  KNIGHT_XPOS     EQU 0
+00002628  =00000004               2572  KNIGHT_YPOS     EQU 4
+00002628  =00000008               2573  KNIGHT_XVEL     EQU 8
+00002628  =0000000C               2574  KNIGHT_YVEL     EQU 12
+00002628  =00000010               2575  KNIGHT_HP       EQU 16
+00002628  =00000012               2576  KNIGHT_STATE    EQU 18
+00002628  =00000014               2577  KNIGHT_W        EQU 20
+00002628                          2578  
+00002628  =00014C08               2579  KNIGHT_SPEED    EQU 85000
+00002628  =0000044C               2580  KNIGHT_ACCELERATION EQU 1100
+00002628  =000499BC               2581  KNIGHT_JUMP     EQU 301500
+00002628  =00002328               2582  GRAVITY_SCALE   EQU 9000
+00002628                          2583  
+00002628  =00000000               2584  KNIGHT_IDLE     EQU 0
+00002628  =00000001               2585  KNIGHT_ATTACK1  EQU 1
+00002628  =00000002               2586  KNIGHT_ATTACK2  EQU 2
+00002628  =00000003               2587  KNIGHT_RUN      EQU 3
+00002628                          2588  
+00002628  =00000018               2589  HEART_HEIGHT    EQU 24
+00002628  =00000020               2590  HEART_WIDTH     EQU 32
+00002628  =FFFFFFD6               2591  HEART_SPACING   EQU -42
+00002628  =0000024C               2592  HEART_START_X   EQU 588
+00002628  =000003C0               2593  HEART_START_Y   EQU 960
+00002628                          2594  
+00002628                          2595  
+00002628                          2596  Knight      ds.l    5
+0000263C                          2597  ; x pos - lw
+0000263C                          2598  ; y pos - lw
+0000263C                          2599  ; x velocity - lw
+0000263C                          2600  ; y velocity - lw
+0000263C                          2601  ; health- w
+0000263C                          2602  ; state - w
+0000263C                          2603  ; knight width - w
+0000263C                          2604  
+0000263C  =00000010               2605  KNIGHT_SWORD_X  EQU 16
+0000263C  =00000002               2606  KNIGHT_SWORD_Y  EQU 2
+0000263C  =0000000E               2607  KNIGHT_SWORD_W  EQU 14
+0000263C  =0000000D               2608  KNIGHT_SWORD_H  EQU 13
+0000263C                          2609  
+0000263C= 0000                    2610  KnightGrounded  dc.w    0 ; is the knight grounded and avaliable to jump?
+0000263E= 0000                    2611  KnightAttacking dc.w    0
+00002640                          2612  
+00002640= 00000000                2613  KnightLastXPos   dc.l   $0
+00002644= 00000000                2614  KnightLastYPos  dc.l    $0
+00002648= 0000                    2615  KnightLastHP    dc.w    $0
+0000264A= 0000                    2616  KnightLastState dc.w    $0
+0000264C                          2617  
+0000264C= 00000000                2618  Score           dc.l    $0
+00002650= 00                      2619  ScoreNull       dc.b    0
+00002651                          2620  
+00002651  =00000107               2621  HILLTOP_TOP     EQU 263
+00002651  =00000114               2622  HILLTOP_BOT     EQU 276
+00002651  =0068854B               2623  HILL_COLOR      EQU 6849867
+00002651                          2624  
+00002651  =00008700               2625  SKY_R_START EQU     $8700 ; start colors are used to reinit sky on diff runs 
+00002652= 8700                    2626  SkyColorR   dc.w   $8700
+00002654  =0000E700               2627  SKY_G_START EQU     $E700
+00002654= E700                    2628  SkyColorG   dc.w    $e700
+00002656  =0000EB00               2629  SKY_B_START EQU     $EB00
+00002656= EB00                    2630  SkyColorB   dc.w    $eb00
+00002658                          2631  LastSkyColor    ds.l    $00000000
+00002658= F700                    2632  SunsetColorR    dc.w    $f700
+0000265A= 7B00                    2633  SunsetColorG    dc.w    $7b00
+0000265C= 2000                    2634  SunsetColorB    dc.w    $2000
+0000265E                          2635  
+0000265E= 08                      2636  SkyIncrementR       dc.b    $8
+0000265F= 08                      2637  SkyIncrementG       dc.b    $8
+00002660= 08                      2638  SkyIncrementB       dc.b    $8
+00002662= 0000                    2639                      dc.w    0
+00002664                          2640                      
+00002664= 00000000                2641  SunYPos             dc.l    $0
+00002668  =00001194               2642  SUN_SPEED           EQU     4500
+00002668  =0000001E               2643  SUN_SIZE            EQU     30
+00002668  =00009EFA               2644  SUN_COLOR           EQU     $009EFA
+00002668                          2645                      
+00002668= 0001                    2646  GameState       dc.w    1
+0000266A                          2647  
+0000266A  =00000000               2648  GAME_LOOP       EQU     0 ; regular game loop 
+0000266A  =00000001               2649  PLAYER_LOST     EQU     1 ; player died
+0000266A  =00000002               2650  SUNSET_LOST     EQU     2 ; player ran out of time
+0000266A  =00000003               2651  GAME_WON        EQU     3
+0000266A                          2652                      
+0000266A= 00000000                2653  LastFrameTime   dc.l    $0
+0000266E= 00000000                2654  DeltaTime       dc.l    $0
+00002672= 00000000                2655  DripTimer       dc.l    $0
+00002676= 0000                    2656  DripSwitch      dc.w    $0
+00002678                          2657  
+00002678  =000169C4               2658  YELLOW equ $00169c4 
+00002678  =00000000               2659  BLACK equ $00000000 
+00002678  =00FFFFFF               2660  WHITE equ $00FFFFFF 
+00002678                          2661  
+00002678                          2662  Hills   INCBIN  "./Assets/Hills.bmp"
+002736B0                          2663  Title   INCBIN  "./Assets/Title.bmp"
+0041EEE8                          2664  Title2   INCBIN  "./Assets/Title2.bmp"
+0054AF20                          2665  Knight_bmp  INCBIN  "./Assets/Knight.bmp"
+0054EB58                          2666  Enemy_bmp       INCBIN  "./Assets/Enemy.bmp"
+005522D0                          2667  IronGalaxy  INCBIN  "./Assets/IronGalaxyLogo_Square.bmp"
+005D0C5A                          2668  Heart       INCBIN  "./Assets/Heart.bmp"
+005D2492                          2669  Instructions_bmp       INCBIN  "./Assets/Instructions.bmp"
+008434CA                          2670  
+008434CA= 46 69 6E 69 73 68 ...   2671  DoneDebug   dc.b    'Finished.',0
+008434D4= 47 41 4D 45 20 57 ...   2672  WonMessage  dc.b    'GAME WON',0
+008434DD= 79 6F 75 20 63 6C ...   2673  WonMessage2 dc.b    'you cleared the hill and made it to the easel before sundown!',0
+0084351B= 79 6F 75 72 20 73 ...   2674  ScoreMessage    dc.b    'your score is : ',0
+0084352C= 47 41 4D 45 20 4C ...   2675  LostMessage dc.b    'GAME LOST',0
+00843536= 79 6F 75 20 72 61 ...   2676  SunsetMessage   dc.b    'you ran out of time! sunset came and went',0
+00843560= 79 6F 75 20 64 69 ...   2677  DiedMessage     dc.b    'you died!',0
+0084356A= 70 72 65 73 73 20 ...   2678  ReplayMessage   dc.b    'press R to replay',0
+0084357C= 4C 4F 41 44 49 4E ...   2679  LoadingMessage  dc.b    'LOADING...',0
+00843588= 00000000                2680              dc.l    0
+0084358C                          2681  
+0084358C                          2682  
+0084358C= 0013 001E 001E          2683  KnightFrameSizes    dc.w    19, 30, 30
+00843592                          2684  
+00843592= 00001642 00001664 ...   2685  KnightAttackFunctionTable   dc.l    idlePlayerAttack, advancingPlayerAttack, performingPlayerAttack
+0084359E                          2686  
+0084359E= 00001068 0000110A ...   2687  GameStateFunctionTable      dc.l    gameLoop, gamePlayerDied, gameSunset, gameWon
+008435AE                          2688  
+008435AE                          2689  SkyEdgeLocation     ds.w    641
+00843AB0                          2690  
+00843AB0                          2691  
+00843AB0                          2692  
+00843AB0                          2693  
+00843AB0                          2694  
+00843AB0                          2695  
+00843AB0                          2696  
+00843AB0                          2697  
+00843AB0                          2698  
+00843AB0                          2699  
+00843AB0                          2700  
+00843AB0                          2701  
+00843AB0                          2702  
+00843AB0                          2703  
+00843AB0                          2704  
+00843AB0                          2705  
+00843AB0                          2706  
+00843AB0                          2707  
+00843AB0                          2708  
+00843AB0                          2709  
+00843AB0                          2710  
+00843AB0                          2711  
+00843AB0                          2712  
+00843AB0                          2713  
+00843AB0                          2714  
+00843AB0                          2715  
+00843AB0                          2716  
+00843AB0                          2717  
+00843AB0                          2718  
+00843AB0                          2719  
+00843AB0                          2720  
+00843AB0                          2721  
+00843AB0                          2722  
+00843AB0                          2723  
+00843AB0                          2724  
+00843AB0                          2725  
+00843AB0                          2726  
+00843AB0                          2727  
+00843AB0                          2728  
+00843AB0                          2729  
+00843AB0                          2730  
+00843AB0                          2731  -------------------- end include --------------------
+00843AB0                          2732      Include     "EnemyList.X68"
+00843AB0                          2733  
+00843AB0  =00000022               2734  ENEMY_WIDTH     EQU 34
+00843AB0  =0000001A               2735  ENEMY_HEIGHT    EQU 26
+00843AB0  =00000003               2736  ENEMY_START_HP  EQU 3
+00843AB0                          2737  
+00843AB0  =00000000               2738  ENEMY_X         EQU 0
+00843AB0  =00000002               2739  ENEMY_Y         EQU 2
+00843AB0  =00000004               2740  ENEMY_HP        EQU 4
+00843AB0  =00000006               2741  ENEMY_W         EQU 6
+00843AB0  =00000008               2742  ENEMY_H         EQU 8
+00843AB0  =0000000A               2743  ENEMY_STATE     EQU 10
+00843AB0  =0000000C               2744  ENEMY_STATE_TIMER EQU 12
+00843AB0                          2745  
+00843AB0  =00000000               2746  ENEMY_IDLE      EQU 0 ; state index for idle
+00843AB0  =00000001               2747  ENEMY_HURT      EQU 1 ; state index for hurt
+00843AB0  =00000002               2748  ENEMY_ATTACK    EQU 2 ; state index for attacking
+00843AB0  =00000003               2749  ENEMY_DEAD      EQU 3
+00843AB0                          2750  
+00843AB0  =00000320               2751  ENEMY_STATE_INTERVAL EQU    800 ; how often the enemy switches between states
+00843AB0  =00000032               2752  ENEMY_HURT_INTERVAL   EQU   50 ; how long the enemy stays hurt before attacking
+00843AB0                          2753  
+00843AB0  =0000000E               2754  ENEMY_STRUCT_SIZE   EQU 14
+00843AB0                          2755  
+00843AB0                          2756  
+00843AB0= 0006                    2757  AliveEnemies  dc.w    6
+00843AB2                          2758  
+00843AB2= 0000                    2759  EnemyStart  dc.w    0
+00843AB4                          2760  
+00843AB4= 005F                    2761  Enemy1      dc.w    $5F ; x 
+00843AB6= 017A                    2762              dc.w    $17a ;y 
+00843AB8= 0003                    2763              dc.w    $3 ; health
+00843ABA= 0022                    2764              dc.w    $22 ; w
+00843ABC= 001A                    2765              dc.w    $1A ; h
+00843ABE= 0000                    2766              dc.w    $0 ; state
+00843AC0= 0000                    2767              dc.w    $0 ; state timer 
+00843AC2                          2768              
+00843AC2= 0200                    2769  Enemy2      dc.w    $200 ; x 
+00843AC4= 019E                    2770              dc.w    $19e ;y 
+00843AC6= 0003                    2771              dc.w    $3 ; health
+00843AC8= 0022                    2772              dc.w    $22 ; w
+00843ACA= 001A                    2773              dc.w    $1A ; h
+00843ACC= 0000                    2774              dc.w    $0 ; state
+00843ACE= 0000                    2775              dc.w    $0 ; state timer 
+00843AD0                          2776              
+00843AD0= 0163                    2777  Enemy3      dc.w    $163 ; x 
+00843AD2= 021F                    2778              dc.w    $21f ;y 
+00843AD4= 0003                    2779              dc.w    $3 ; health
+00843AD6= 0022                    2780              dc.w    $22 ; w
+00843AD8= 001A                    2781              dc.w    $1A ; h
+00843ADA= 0000                    2782              dc.w    $0 ; state
+00843ADC= 0000                    2783              dc.w    $0 ; state timer 
+00843ADE                          2784  
+00843ADE                          2785              
+00843ADE= 0165                    2786  Enemy4      dc.w    $165 ; x 
+00843AE0= 02DB                    2787              dc.w    $2Db ;y 
+00843AE2= 0003                    2788              dc.w    $3 ; health
+00843AE4= 0022                    2789              dc.w    $22 ; w
+00843AE6= 001A                    2790              dc.w    $1A ; h
+00843AE8= 0000                    2791              dc.w    $0 ; state
+00843AEA= 0000                    2792              dc.w    $0 ; state timer 
+00843AEC                          2793              
+00843AEC= 0036                    2794  Enemy5      dc.w    $36 ; x 
+00843AEE= 028D                    2795              dc.w    $28d ;y 
+00843AF0= 0003                    2796              dc.w    $3 ; health
+00843AF2= 0022                    2797              dc.w    $22 ; w
+00843AF4= 001A                    2798              dc.w    $1A ; h
+00843AF6= 0000                    2799              dc.w    $0 ; state
+00843AF8= 0000                    2800              dc.w    $0 ; state timer 
+00843AFA                          2801              
+00843AFA= 0205                    2802  Enemy6      dc.w    $205 ; x 
+00843AFC= 0362                    2803              dc.w    $362 ;y 
+00843AFE= 0003                    2804              dc.w    $3 ; health
+00843B00= 0022                    2805              dc.w    $22 ; w
+00843B02= 001A                    2806              dc.w    $1A ; h
+00843B04= 0000                    2807              dc.w    $0 ; state
+00843B06= 0000                    2808              dc.w    $0 ; state timer 
+00843B08                          2809  
+00843B08                          2810  
+00843B08= 0000                    2811  EnemyEnd    dc.w    0
+00843B0A                          2812  
+00843B0A= 00000000                2813  EnemyToRedraw   dc.l    0 ; if the player is overlapping w/ an enemy, 
+00843B0E                          2814                              ;the enemy will need to be redrawn to inval the player
+00843B0E                          2815  
+00843B0E                          2816  
+00843B0E                          2817  
+00843B0E                          2818  
+00843B0E                          2819  
+00843B0E                          2820  
+00843B0E                          2821  
+00843B0E                          2822  
+00843B0E                          2823  
+00843B0E                          2824  
+00843B0E                          2825  
+00843B0E                          2826  
+00843B0E                          2827  
+00843B0E                          2828  
+00843B0E                          2829  
+00843B0E                          2830  
+00843B0E                          2831  
+00843B0E                          2832  
+00843B0E                          2833  -------------------- end include --------------------
+00843B0E                          2834  
+00843B0E                          2835      END    START        ; last line of source
+
+No errors detected
+No warnings generated
+
+
+SYMBOL TABLE INFORMATION
+Symbol-name         Value
+-------------------------
+ADDPLAYERGRAVITY    17E4
+ADVANCINGPLAYERATTACK  1664
+ALIVEENEMIES        843AB0
+ALL_REG             7FFF
+AROUNDSETFLAG32BIT  2150
+A_REGS              FF00
+BLACK               0
+BLOCK1              2596
+BLOCK10             25FE
+BLOCK11             2606
+BLOCK12             260E
+BLOCK13             2616
+BLOCK14             261E
+BLOCK2              259E
+BLOCK3              25A6
+BLOCK4              25AE
+BLOCK4STEP          25B6
+BLOCK5              25BE
+BLOCK6              25C6
+BLOCK6CHUNK2        25CE
+BLOCK6CHUNK3        25D6
+BLOCK6CHUNK4        25DE
+BLOCK7              25E6
+BLOCK8              25EE
+BLOCK9              25F6
+BLOCKEND            2626
+BLOCKSTART          2594
+BLOCK_DATA_SIZE     8
+BLOCK_H             6
+BLOCK_W             4
+BLOCK_X             0
+BLOCK_Y             2
+CEILINGCHECKLOOP    18CC
+CEILINGCOLLISION    18F8
+CHECKCOLLISION      1852
+CHECKCOLLISIONX     1912
+CHECKCOLLISIONXLOOP  1920
+CHECKCOLLISIONYRIGHT  19E4
+CHECKEASEL          1EF0
+CHECKEASELFALSE     1F5A
+CHECKENEMYHURT      1CCC
+CHECKPLAYERALIVE    143A
+CHECKPLAYERNEEDINVAL  13E4
+CHECKSUNSET         235A
+CHECKXPLAYERINPUT   17FE
+CLAMP               2006
+CLAMPCOMPAREMAX     2018
+CLEARSCREEN         126C
+COLLIDE             1F5C
+COLLIDEXAXISLEFT    1FB2
+COLLIDEXAXISRIGHT   1FC2
+COLLIDEYAXISBOTTOM  1FA2
+COLLIDEYAXISTOP     1F92
+COLLISION           1FDA
+COLLISIONFOUND      19FE
+CONTINUEINVALENEMYLOOP  1D5A
+CONTINUESWORDATTACKLOOP  170A
+DELTATIME           266E
+DIEDMESSAGE         843560
+DISPLAYCHUNK        2102
+DISPLAYCHUNK32      21FC
+DISPLAYCHUNKROW     2196
+DISPLAYCHUNKROW32   2252
+DISPLAYINSTRUCTIONS  10BC
+DISPLAYLOADINGSCREEN  1094
+DONEDEBUG           8434CA
+DONTDRIP            1BDA
+DONTINVALPLAYER     13D0
+DRAWENEMY           1D68
+DRAWPLAYER          15D6
+DRAWSKY             24EC
+DRAWSKYINIT         2432
+DRAWSUN             2376
+DRAW_BUFFER         5E
+DRAW_CIRCLE         58
+DRAW_LINE           54
+DRAW_PIXEL          52
+DRAW_RECT           57
+DRAW_TEXT           5F
+DRIPSWITCH          2676
+DRIPTIMER           2672
+DRIP_H              18
+DRIP_TIME_LENGTH    1F4
+DRIP_W              C
+DRIP_X              FC
+DRIP_Y              197
+D_REGS              FF
+EASEL_H             1F
+EASEL_W             19
+EASEL_X             13C
+EASEL_Y             13D
+ENABLE_ECHO         C
+ENEMY1              843AB4
+ENEMY2              843AC2
+ENEMY3              843AD0
+ENEMY4              843ADE
+ENEMY5              843AEC
+ENEMY6              843AFA
+ENEMYCOLLIDE        1E78
+ENEMYCOLLIDEBOTTOMOVERLAP  1ECA
+ENEMYCOLLIDELEFT    1E9C
+ENEMYCOLLIDETOPOVERLAP  1EB0
+ENEMYEND            843B08
+ENEMYPLAYERCOLLIDE  1DFA
+ENEMYPLAYERCOLLIDELOOP  1E08
+ENEMYPLAYERCOLLISION  1E3C
+ENEMYSTART          843AB2
+ENEMYTOREDRAW       843B0A
+ENEMY_ATTACK        2
+ENEMY_BMP           54EB58
+ENEMY_DEAD          3
+ENEMY_H             8
+ENEMY_HEIGHT        1A
+ENEMY_HP            4
+ENEMY_HURT          1
+ENEMY_HURT_INTERVAL  32
+ENEMY_IDLE          0
+ENEMY_START_HP      3
+ENEMY_STATE         A
+ENEMY_STATE_INTERVAL  320
+ENEMY_STATE_TIMER   C
+ENEMY_STRUCT_SIZE   E
+ENEMY_W             6
+ENEMY_WIDTH         22
+ENEMY_X             0
+ENEMY_Y             2
+ENTERENEMYHURTSTATE  1D24
+FINDSKYEDGEXLOOP    24BE
+FINDSKYEDGEYLOOP    24C4
+FINISHINITENEMY     1C90
+FINISHYFINDEDGELOOP  24D4
+GAMELOOP            1068
+GAMEPLAYERDIED      110A
+GAMESTATE           2668
+GAMESTATEFUNCTIONTABLE  84359E
+GAMESUNSET          117C
+GAMEWON             11EE
+GAME_LOOP           0
+GAME_WON            3
+GET24BCOLOR         219E
+GET32BCOLOR         21B2
+GETCONTINUEKEY      10FC
+GETGAMESTATE        1292
+GETPLAYERINPUT      1716
+GETPLAYERINPUTD     1764
+GETPLAYERINPUTW     17B0
+GETRANDOMBYTEINTOD6  208C
+GETRANDOMLONGINTOD6  20C6
+GETREPLAYKEY        12F2
+GETSTARTKEY         1AD8
+GET_4KEYS           13
+GET_MOUSE           3D
+GET_PIXEL_COLOR     53
+GET_TIME            8
+GET_TIME_COMMAND    8
+GINCREMENT          2504
+GINCREMENTINIT      244A
+GOTCOLLISIONY       19CA
+GRAVITY_SCALE       2328
+GROUNDCHECKLOOP     1868
+HANDLEPLAYERATTACK  1626
+HANDLEXVELOCITYINPUT  177E
+HANDLEXVELOCITYINPUTD  17A0
+HEART               5D0C5A
+HEART_HEIGHT        18
+HEART_SPACING       FFFFFFD6
+HEART_START_X       24C
+HEART_START_Y       3C0
+HEART_WIDTH         20
+HILLS               2678
+HILLTOP_BOT         114
+HILLTOP_TOP         107
+HILL_COLOR          68854B
+HURTPLAYER          1E66
+IDLEPLAYERATTACK    1642
+IDLEPLAYERATTACKRETURN  1662
+INCREASECHUNKROW    21CE
+INCREASECHUNKROW32  226A
+INCREASEENEMYSTATETIMER  1CE8
+INITBACKGROUND      229E
+INITENEMY           1BF8
+INITENEMYLOOP       1C1C
+INITPLAYER          1306
+INITSCREEN          12D6
+INITTIMEVARIABLES   12A6
+INITTITLESCREEN     1A94
+INSTRUCTIONS_BMP    5D2492
+INVALENEMY          1C9C
+INVALENEMYLOOP      1CB0
+INVALHEALTH         1466
+INVALHEALTHEMPTY    14D4
+INVALHEALTHLOOP     1488
+INVALHEALTHLOOPINCREMENT  1516
+INVALHEALTHRETURN   151E
+INVALPLAYER         152C
+INVALPLAYERENEMY    158C
+IRONGALAXY          5522D0
+KILLENEMY           1D34
+KILLPLAYER          145C
+KNIGHT              2628
+KNIGHTATTACKFUNCTIONTABLE  843592
+KNIGHTATTACKING     263E
+KNIGHTFRAMESIZES    84358C
+KNIGHTGROUNDED      263C
+KNIGHTLASTHP        2648
+KNIGHTLASTSTATE     264A
+KNIGHTLASTXPOS      2640
+KNIGHTLASTYPOS      2644
+KNIGHT_ACCELERATION  44C
+KNIGHT_ATTACK1      1
+KNIGHT_ATTACK2      2
+KNIGHT_BMP          54AF20
+KNIGHT_HB_W         13
+KNIGHT_HEIGHT       20
+KNIGHT_HP           10
+KNIGHT_IDLE         0
+KNIGHT_JUMP         499BC
+KNIGHT_RUN          3
+KNIGHT_SPEED        14C08
+KNIGHT_STARTHP      3
+KNIGHT_STARTX       13F
+KNIGHT_STARTY       392
+KNIGHT_STATE        12
+KNIGHT_SWORD_H      D
+KNIGHT_SWORD_W      E
+KNIGHT_SWORD_X      10
+KNIGHT_SWORD_Y      2
+KNIGHT_W            14
+KNIGHT_WIDTH        1E
+KNIGHT_XPOS         0
+KNIGHT_XVEL         8
+KNIGHT_YPOS         4
+KNIGHT_YVEL         C
+LASTFRAMETIME       266A
+LASTSKYCOLOR        2658
+LITTLETOBIGEND      2028
+LOADINGMESSAGE      84357C
+LOSTMESSAGE         84352C
+MAIN                1000
+MOVEPLAYERX         180C
+MOVEPLAYERY         1838
+MULTIPLY            1FE2
+MUL_LOOP            1FF6
+NINC0               20A2
+NINC1               20AA
+NOCOLLISION         1FD2
+NOCOLLISIONFOUND    1A0C
+NOENEMYPLAYERCOLLISION  1E5C
+PERFORMINGPLAYERATTACK  1672
+PLAYERCEILINGCHECK  18BE
+PLAYERCOLLIDEX      1A16
+PLAYERCOLLIDEXCHECKBOTTOM  1A6A
+PLAYERCOLLIDEXCHECKBOTTOMSMALLER  1A90
+PLAYERCOLLIDEXCHECKTOP  1A52
+PLAYERCOLLIDEXCHECKTOPSMALLER  1A6A
+PLAYERCOLLIDEXLEFT  1A44
+PLAYERCOLLIDEYDOWN  1994
+PLAYERCOLLIDEYUP    1954
+PLAYERGROUNDCHECK   185A
+PLAYERISGROUNDED    189A
+PLAYER_LOST         1
+RANDOMVAL           20FA
+READ_CHAR           5
+READ_MOUSE_DOWN     0
+REPLAYMESSAGE       84356A
+RETURNCLAMP         2024
+RETURNENEMYPLAYERCOLLIDE  1E64
+RETURNGETPLAYERINPUT  194E
+RETURNPLAYERCOLLIDE  1A14
+RETURNPLAYERNEEDINVAL  1428
+RETURNPLAYERNOINVAL  1434
+RETURNSWORDATTACK   1714
+RETURN_ZERO         2002
+RINCREMENT          251E
+RINCREMENTINIT      2464
+SCORE               264C
+SCOREMESSAGE        84351B
+SCORENULL           2650
+SCREEN_HEIGHT       3E8
+SCREEN_WIDTH        280
+SEEDRANDOMNUMBER    2074
+SETFLAG32BIT        214A
+SETPENCOLOR         21C0
+SET_DRAW_MODE       5C
+SET_FILL_COLOR      51
+SET_PEN_COLOR       50
+SET_RESOLUTION      21
+SHORTDRIP           1B8C
+SKYCOLORB           2656
+SKYCOLORG           2654
+SKYCOLORR           2652
+SKYEDGELOCATION     8435AE
+SKYFILLINXLOOP      2580
+SKYINCREMENTB       2660
+SKYINCREMENTG       265F
+SKYINCREMENTR       265E
+SKYPENCOLOR         2538
+SKYPENCOLORINIT     247E
+SKY_B_START         EB00
+SKY_CHANGEB         30
+SKY_CHANGEG         18
+SKY_CHANGER         18
+SKY_G_START         E700
+SKY_R_START         8700
+SKY_STOPB           54
+SKY_STOPG           54
+SKY_STOPR           FF00
+START               1000
+STARTGAME           1036
+SUNSETCOLORB        265C
+SUNSETCOLORG        265A
+SUNSETCOLORR        2658
+SUNSETENDGAME       236C
+SUNSETMESSAGE       843536
+SUNSET_LOST         2
+SUNYPOS             2664
+SUN_COLOR           9EFA
+SUN_SIZE            1E
+SUN_SPEED           1194
+SWORDATTACK         1688
+SWORDATTACKLOOP     169C
+TEMPRANDOMLONG      20FE
+TERMINATE           9
+TITLE               2736B0
+TITLE2              41EEE8
+UPDATEBACKGROUND    233E
+UPDATEENEMY         1BEA
+UPDATEENEMYSPRITE   1D54
+UPDATEENEMYSTATE    1D06
+UPDATEENEMYSTATEIDLE  1D4C
+UPDATEPLAYER        13A0
+UPDATESUN           234C
+UPDATETIMEVARIABLES  12BA
+WHITE               FFFFFF
+WONMESSAGE          8434D4
+WONMESSAGE2         8434DD
+YELLOW              169C4

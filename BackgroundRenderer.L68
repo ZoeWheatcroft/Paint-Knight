@@ -1,0 +1,505 @@
+00000000 Starting Address
+Assembler used: EASy68K Editor/Assembler v5.16.01
+Created On: 6/21/2023 3:43:27 PM
+
+00000000                             1  *-----------------------------------------------------------
+00000000                             2  * Title      : BackgroundRenderer
+00000000                             3  * Written by : Zoe Wheatcroft
+00000000                             4  * Date       : 6/16/2023
+00000000                             5  * Description: Renders the hills and the sky
+00000000                             6  *               The sky is continually updating, so there is an update background func
+00000000                             7  *               The sky render works by drawing a rectangle to the top of the hills using graphics
+00000000                             8  *               and then filling in the cracks and crevices by going downwards until it encounters non sky colors 
+00000000                             9  *-----------------------------------------------------------
+00000000                            10  
+00000000                            11  initBackground
+00000000                            12      ; get the bit map we're rendering 
+Line 13 ERROR: Undefined symbol
+00000000  43F9 004DBD16             13      lea     Hills, a1
+00000006  2F09                      14      move.l  a1, -(sp)
+00000008                            15      ; starting top left corner of chunk
+00000008  303C 0000                 16      move.w  #000, d0 ; x
+0000000C  E188                      17      lsl.l     #$8, d0
+0000000E  E188                      18      lsl.l     #$8, d0
+00000010  303C 0000                 19      move.w  #000, d0 ; y
+00000014  2F00                      20      move.l  d0, -(sp)
+00000016                            21      
+00000016                            22      ; set the width and height of what we want to render
+00000016  2F3C 00000280             23      move.l  #640,-(sp) ; d3 = width of chunk
+0000001C  2F3C 000001E0             24      move.l  #480,-(sp) ; d4 = chunk height
+00000022                            25      
+00000022  2F3C 00000000             26      move.l  #$00000000,-(sp) ; d5 = where to display
+00000028  2F29 001C                 27      move.l  $1c(a1),-(sp) ; d6 = 32/24 bit color
+0000002C                            28  
+Line 29 ERROR: Undefined symbol
+0000002C  4EB9 004DBD16             29      jsr     displayChunk
+00000032  DFFC 00000018             30      add.l   #24, sp
+00000038                            31      
+00000038  4EB9 00000202             32      jsr     drawSkyInit
+0000003E                            33      
+0000003E                            34  * Initialize sun 
+Line 35 ERROR: Undefined symbol
+0000003E  223C 004DBD16             35      move.l  #SUN_COLOR, d1
+Line 36 ERROR: Undefined symbol
+00000044  103C 0016                 36      move.b  #SET_PEN_COLOR, d0
+00000048  4E4F                      37      trap    #15
+0000004A                            38  
+Line 39 ERROR: Undefined symbol
+0000004A  103C 0016                 39      move.b  #SET_FILL_COLOR,d0
+0000004E  4E4F                      40      trap    #15
+00000050                            41      
+00000050  4281                      42      clr.l   d1
+00000052  4287                      43      clr.l   d7
+Line 44 ERROR: Undefined symbol
+00000054  103C 0016                 44      move.b  #DRAW_CIRCLE,d0
+Line 45 ERROR: Undefined symbol
+00000058  3C3C BD16                 45      move.w  #SUN_SIZE, d6
+Line 46 ERROR: Undefined symbol
+0000005C  323C BD16                 46      move.w  #SCREEN_WIDTH,d1
+00000060  E289                      47      lsr.l   #$1, d1 ; d1 = x, halfway point
+00000062  3E06                      48      move.w  d6, d7
+00000064  E28F                      49      lsr.l   #$1, d7 
+00000066  9287                      50      sub.l   d7, d1 ; d1 = x - sun_w/2
+00000068                            51      
+00000068  3601                      52      move.w  d1, d3
+Line 53 ERROR: Undefined symbol
+0000006A  0683 004DBD16             53      add.l   #SUN_SIZE, d3 ; d3 = right edge 
+00000070                            54      
+00000070                            55      ; calculate y pos
+Line 56 ERROR: Undefined symbol
+00000070  23FC 00000000 005455B8    56      move.l  #0, SunYPos 
+Line 57 ERROR: Undefined symbol
+0000007A  2439 004DBD16             57      move.l  SunYPos, d2
+00000080  2A38 0000                 58      move.l  0, d5 
+00000084  D485                      59      add.l   d5, d2 
+Line 60 ERROR: Undefined symbol
+00000086  23C2 005455B8             60      move.l  d2, SunYPos
+0000008C  4842                      61      swap    d2
+0000008E  3802                      62      move.w  d2, d4
+Line 63 ERROR: Undefined symbol
+00000090  0644 BD16                 63      addi.w  #SUN_SIZE,d4
+00000094                            64      
+00000094  4E75                      65      rts
+00000096                            66  
+00000096                            67      
+00000096                            68  updateBackground
+00000096                            69      ; draw and update the sky 
+00000096  4EB9 000002BC             70      jsr     drawSky
+0000009C  4EB9 000000A4             71      jsr     updateSun
+000000A2  4E75                      72      rts
+000000A4                            73  
+000000A4                            74  
+000000A4                            75  updateSun
+000000A4  4EB9 000000CE             76      jsr     drawSun
+000000AA  4EB9 000000B2             77      jsr     checkSunset ; is it sunset?
+000000B0  4E75                      78      rts
+000000B2                            79      
+000000B2                            80  checkSunset
+Line 81 ERROR: Undefined symbol
+000000B2  2039 004DBD16             81      move.l  SunYPos, d0
+000000B8  4840                      82      swap    d0
+Line 83 ERROR: Undefined symbol
+000000BA  0C40 BD16                 83      cmpi.w  #HILLTOP_BOT, d0
+000000BE  6700 0004                 84      beq     sunsetEndGame
+000000C2  4E75                      85      rts
+000000C4                            86  sunsetEndGame
+Line 87 ERROR: Undefined symbol
+000000C4  33FC BD16 005455B8        87      move.w  #SUNSET_LOST, GameState
+000000CC  4E75                      88      rts
+000000CE                            89  
+000000CE                            90  drawSun
+Line 91 ERROR: Undefined symbol
+000000CE  2C39 004DBD16             91      move.l  SunYPos, d6
+Line 92 ERROR: Undefined symbol
+000000D4  2A39 004DBD16             92      move.l  DeltaTime, d5 
+Line 93 ERROR: Undefined symbol
+000000DA  CAFC BD16                 93      mulu.w  #SUN_SPEED, d5
+000000DE  DA86                      94      add.l   d6, d5
+000000E0  E18D                      95      lsl.l   #$8,d5
+000000E2  E18D                      96      lsl.l   #$8,d5
+000000E4  4846                      97      swap    d6
+000000E6  9A46                      98      sub.w   d6, d5 ; d5 = diff in position between old and new sun
+000000E8                            99      ; add the hills on top
+000000E8                           100          ; start by invaling 
+Line 101 ERROR: Undefined symbol
+000000E8  43F9 004DBD16            101      lea     Hills, a1
+000000EE  2F09                     102      move.l  a1, -(sp)
+000000F0                           103      ; starting top left corner of chunk
+000000F0  4281                     104      clr.l   d1
+Line 105 ERROR: Comma expected
+000000F2                           105      move.w  #SCREEN_WIDTH-1,d1
+Line 106 ERROR: Undefined symbol
+000000F2  0481 004DBD16            106      subi.l   #SUN_SIZE,d1 ; d1 = x - sun_w
+000000F8  E289                     107      lsr.l   #$1, d1 ; d1 = x/2,halfway point
+000000FA                           108      
+000000FA  3001                     109      move.w  d1, d0 ; x
+000000FC  E188                     110      lsl.l     #$8, d0
+000000FE  E188                     111      lsl.l     #$8, d0
+Line 112 ERROR: Undefined symbol
+00000100  2239 004DBD16            112      move.l  SunYPos, d1
+00000106  4841                     113      swap    d1
+00000108  3001                     114      move.w  d1, d0 ; y
+0000010A  2F00                     115      move.l  d0, -(sp)
+0000010C                           116      
+0000010C                           117      ; set the width and height of what we want to render
+Line 118 ERROR: Invalid syntax
+0000010C                           118      move.l  #SUN_SIZE+1,-(sp) ; d3 = width of chunk
+0000010C  2F05                     119      move.l  d5,-(sp) ; d4 = chunk height
+0000010E                           120      
+0000010E  4281                     121      clr.l   d1
+Line 122 ERROR: Comma expected
+00000110                           122      move.w  #SCREEN_WIDTH-1,d1
+Line 123 ERROR: Undefined symbol
+00000110  0481 004DBD16            123      subi.l   #SUN_SIZE,d1 ; d1 = x - sun_w
+00000116  E289                     124      lsr.l   #$1, d1 ; d1 = x/2,halfway point
+00000118                           125      
+00000118  3001                     126      move.w  d1, d0 ; x
+0000011A  E188                     127      lsl.l     #$8, d0
+0000011C  E188                     128      lsl.l     #$8, d0
+Line 129 ERROR: Undefined symbol
+0000011E  2239 004DBD16            129      move.l  SunYPos, d1
+00000124  4841                     130      swap    d1
+00000126  3001                     131      move.w  d1, d0 ; y
+00000128  2F00                     132      move.l  d0, -(sp)
+0000012A  2F29 001C                133      move.l  $1c(a1),-(sp) ; d6 = 32/24 bit color
+0000012E                           134  
+Line 135 ERROR: Undefined symbol
+0000012E  4EB9 004DBD16            135      jsr     displayChunk
+00000134  DFFC 00000018            136      add.l   #24, sp
+0000013A                           137  
+0000013A                           138  
+0000013A                           139      ; draw the sun  
+Line 140 ERROR: Undefined symbol
+0000013A  223C 004DBD16            140      move.l  #SUN_COLOR, d1
+Line 141 ERROR: Undefined symbol
+00000140  103C 0016                141      move.b  #SET_PEN_COLOR, d0
+00000144  4E4F                     142      trap    #15
+00000146                           143  
+Line 144 ERROR: Undefined symbol
+00000146  103C 0016                144      move.b  #SET_FILL_COLOR,d0
+0000014A  4E4F                     145      trap    #15
+0000014C                           146      
+0000014C  4281                     147      clr.l   d1
+0000014E  4287                     148      clr.l   d7
+Line 149 ERROR: Undefined symbol
+00000150  103C 0016                149      move.b  #DRAW_CIRCLE,d0
+Line 150 ERROR: Undefined symbol
+00000154  3C3C BD16                150      move.w  #SUN_SIZE, d6
+Line 151 ERROR: Comma expected
+00000158                           151      move.w  #SCREEN_WIDTH-1,d1
+00000158  E289                     152      lsr.l   #$1, d1 ; d1 = x, halfway point
+0000015A  3E06                     153      move.w  d6, d7
+0000015C  E28F                     154      lsr.l   #$1, d7 
+0000015E  9287                     155      sub.l   d7, d1 ; d1 = x - sun_w/2
+00000160                           156      
+00000160  3601                     157      move.w  d1, d3
+Line 158 ERROR: Undefined symbol
+00000162  0683 004DBD16            158      add.l   #SUN_SIZE, d3 ; d3 = right edge 
+00000168                           159      
+00000168                           160      ; calculate y pos 
+Line 161 ERROR: Undefined symbol
+00000168  2439 004DBD16            161      move.l  SunYPos, d2
+Line 162 ERROR: Undefined symbol
+0000016E  2A39 004DBD16            162      move.l  DeltaTime, d5 
+Line 163 ERROR: Undefined symbol
+00000174  CAFC BD16                163      mulu.w  #SUN_SPEED, d5
+00000178  D485                     164      add.l   d5, d2 
+Line 165 ERROR: Undefined symbol
+0000017A  23C2 005455B8            165      move.l  d2, SunYPos
+00000180  4842                     166      swap    d2
+00000182  3802                     167      move.w  d2, d4
+Line 168 ERROR: Undefined symbol
+00000184  0644 BD16                168      addi.w  #SUN_SIZE,d4
+00000188                           169      
+00000188  4E4F                     170      trap    #15
+0000018A                           171      
+0000018A                           172     
+0000018A                           173      ; add the hills on top
+0000018A                           174          ; start by invaling 
+Line 175 ERROR: Undefined symbol
+0000018A  43F9 004DBD16            175      lea     Hills, a1
+00000190  2F09                     176      move.l  a1, -(sp)
+00000192                           177      ; starting top left corner of chunk
+00000192  4281                     178      clr.l   d1
+Line 179 ERROR: Comma expected
+00000194                           179      move.w  #SCREEN_WIDTH-1,d1
+Line 180 ERROR: Undefined symbol
+00000194  0481 004DBD16            180      subi.l   #SUN_SIZE,d1 ; d1 = x - sun_w
+0000019A  E289                     181      lsr.l   #$1, d1 ; d1 = x/2,halfway point
+0000019C                           182      
+0000019C  3001                     183      move.w  d1, d0 ; x
+0000019E  E188                     184      lsl.l     #$8, d0
+000001A0  E188                     185      lsl.l     #$8, d0
+Line 186 ERROR: Undefined symbol
+000001A2  2239 004DBD16            186      move.l  SunYPos, d1
+000001A8  4841                     187      swap    d1
+000001AA  3001                     188      move.w  d1, d0 ; y
+000001AC  2F00                     189      move.l  d0, -(sp)
+000001AE                           190      
+000001AE                           191      ; set the width and height of what we want to render
+Line 192 ERROR: Invalid syntax
+000001AE                           192      move.l  #SUN_SIZE+1,-(sp) ; d3 = width of chunk
+Line 193 ERROR: Undefined symbol
+000001AE  2F3C 004DBD16            193      move.l  #SUN_SIZE,-(sp) ; d4 = chunk height
+000001B4                           194      
+000001B4  4281                     195      clr.l   d1
+Line 196 ERROR: Comma expected
+000001B6                           196      move.w  #SCREEN_WIDTH-1,d1
+Line 197 ERROR: Undefined symbol
+000001B6  0481 004DBD16            197      subi.l   #SUN_SIZE,d1 ; d1 = x - sun_w
+000001BC  E289                     198      lsr.l   #$1, d1 ; d1 = x/2,halfway point
+000001BE                           199      
+000001BE  3001                     200      move.w  d1, d0 ; x
+000001C0  E188                     201      lsl.l     #$8, d0
+000001C2  E188                     202      lsl.l     #$8, d0
+Line 203 ERROR: Undefined symbol
+000001C4  2239 004DBD16            203      move.l  SunYPos, d1
+000001CA  4841                     204      swap    d1
+000001CC  3001                     205      move.w  d1, d0 ; y
+000001CE  2F00                     206      move.l  d0, -(sp)
+000001D0  2F29 001C                207      move.l  $1c(a1),-(sp) ; d6 = 32/24 bit color
+000001D4                           208  
+Line 209 ERROR: Undefined symbol
+000001D4  4EB9 004DBD16            209      jsr     displayChunk
+000001DA  DFFC 00000018            210      add.l   #24, sp
+000001E0                           211      
+000001E0  4E75                     212      rts
+000001E2                           213      
+Line 214 ERROR: Symbol value differs between first and second pass
+000001E2                           214  drawSkyInit
+Line 215 ERROR: Undefined symbol
+000001E2  3239 004DBD16            215      move.w  SkyColorB, d1
+000001E8  0C41 00C1                216      cmpi.w  #$00C1, d1 ; magic number, replace 
+000001EC  6E00 00E6                217      bgt     gIncrement
+Line 218 ERROR: Undefined symbol
+000001F0  0441 BD16                218      subi.w  #SKY_CHANGER, d1
+Line 219 ERROR: Undefined symbol
+000001F4  33C1 005455B8            219      move.w  d1, SkyColorB
+000001FA                           220  
+Line 221 ERROR: Symbol value differs between first and second pass
+000001FA                           221  gIncrementInit
+000001FA  E189                     222      lsl.l   #$8, d1 
+Line 223 ERROR: Undefined symbol
+000001FC  3239 004DBD16            223      move.w  SkyColorG, d1
+00000202  0C41 0061                224      cmpi.w  #$0061, d1
+00000206  6E00 00E6                225      bgt     rIncrement
+Line 226 ERROR: Undefined symbol
+0000020A  0441 BD16                226      subi.w  #SKY_CHANGEG, d1
+Line 227 ERROR: Undefined symbol
+0000020E  33C1 005455B8            227      move.w  d1, SkyColorG
+00000214                           228  
+Line 229 ERROR: Symbol value differs between first and second pass
+00000214                           229  rIncrementInit
+00000214  E189                     230      lsl.l   #$8, d1 
+Line 231 ERROR: Undefined symbol
+00000216  3239 004DBD16            231      move.w  SkyColorR, d1
+0000021C  0C41 FF9F                232      cmpi.w  #$FF9F, d1
+00000220  6E00 00E6                233      bgt     skyPenColor
+Line 234 ERROR: Undefined symbol
+00000224  0641 BD16                234      add.w   #SKY_CHANGEB, d1
+Line 235 ERROR: Undefined symbol
+00000228  33C1 005455B8            235      move.w  d1, SkyColorR
+0000022E                           236  
+Line 237 ERROR: Symbol value differs between first and second pass
+0000022E                           237  skyPenColorInit
+0000022E  E089                     238      lsr.l   #$8, d1 
+Line 239 ERROR: Undefined symbol
+00000230  2E39 004DBD16            239      move.l  LastSkyColor, d7
+Line 240 ERROR: Undefined symbol
+00000236  23C1 005455B8            240      move.l  d1, LastSkyColor
+Line 241 ERROR: Undefined symbol
+0000023C  103C 0016                241      move.b  #SET_PEN_COLOR,d0
+00000240  4E4F                     242      trap    #15
+Line 243 ERROR: Undefined symbol
+00000242  103C 0016                243      move.b  #SET_FILL_COLOR,d0
+00000246  4E4F                     244      trap    #15
+00000248                           245      
+00000248                           246      ; draw the rect down to the top edge of the hills
+00000248  323C 0000                247      move.w  #0, d1 ;LX
+0000024C  343C 0000                248      move.w  #0, d2 ;UY
+Line 249 ERROR: Undefined symbol
+00000250  363C BD16                249      move.w  #SCREEN_WIDTH, d3 ; RX
+Line 250 ERROR: Invalid syntax
+00000254                           250      move.w  #HILLTOP_TOP+1, d4 ;BY
+Line 251 ERROR: Undefined symbol
+00000254  103C 0016                251      move.b  #DRAW_RECT,d0
+00000258  4E4F                     252      trap    #15
+0000025A                           253      
+0000025A                           254      
+0000025A                           255  * in order to fill in the gap between the bottom of the sky and top of the hill,
+0000025A                           256  * we're going to store the location of the hill edge and then draw a line from the box to the edge
+0000025A                           257  * this means that on subsequent runs, we just get the hill edge from memory and draw the line
+0000025A                           258  * instead of spending time searching for the edge
+0000025A                           259  * This reduces the time from ~20*640 to 1*640 on subsequent runs
+Line 260 ERROR: Undefined symbol
+0000025A  43F9 004DBD16            260      lea     SkyEdgeLocation, a1 ; prepare address so we can add the loc for top of hill in
+00000260  7200                     261      move.l  #0, d1 ; d1 = x pos
+Line 262 ERROR: Undefined symbol
+00000262  2A3C 004DBD16            262      move.l  #SCREEN_WIDTH, d5 ; d4 = x loops
+00000268  7E00                     263      move.l  #0, d7 ; we're checking for black (no black = hill start)
+Line 264 ERROR: Symbol value differs between first and second pass
+0000026A                           264  findSkyEdgeXloop
+Line 265 ERROR: Invalid syntax
+0000026A                           265      move.l  #HILLTOP_TOP+2, d2 ; d2 = y startpos 
+Line 266 ERROR: Symbol value differs between first and second pass
+0000026A                           266  findSkyEdgeYLoop
+Line 267 ERROR: Undefined symbol
+0000026A  103C 0016                267      move.b  #GET_PIXEL_COLOR, d0
+0000026E  4E4F                     268      trap    #15
+00000270                           269      
+00000270  BE80                     270      cmp.l   d0, d7 ; check color @ location == black
+00000272  6600 0030                271      bne     finishYFindEdgeLoop ; if hit hills, done w column
+00000276                           272      
+00000276  5242                     273      addi.w  #1, d2 ; didnt hit hills, increase y and continue
+00000278  601A                     274      bra     findSkyEdgeYLoop
+Line 275 ERROR: Symbol value differs between first and second pass
+0000027A                           275  finishYFindEdgeLoop    
+0000027A  5342                     276      subi.w  #1, d2
+0000027C  32C2                     277      move.w  d2, (a1)+ ; add the new y pos to the data and increase the pointer
+0000027E                           278      ; draw the line 
+0000027E                           279  * Now that we know where the top edge of the hills is, we draw a line from the box down to the top edge
+0000027E                           280  * to fill in the gap. 
+0000027E                           281  * Draw line where X1 = D1.W, Y1 = D2.W, X2 = D3.W, Y2 = D4.W
+0000027E  3601                     282      move.w  d1, d3 ; x will be the same, make x2 = x1
+Line 283 ERROR: Invalid syntax
+00000280                           283      move.w  #HILLTOP_TOP+2, d4 ; d4 = start y 
+00000280                           284      ; drawing line from (d1, d2), hill edge, to (d3, d4), box edge
+Line 285 ERROR: Undefined symbol
+00000280  103C 0016                285      move.b  #DRAW_LINE, d0
+00000284  4E4F                     286      trap    #15
+00000286                           287  
+00000286                           288      ; finished column, incrememnt x vars
+00000286  5241                     289      addi.w  #1, d1
+00000288                           290      
+00000288  51CD 0004                291      dbra    d5, findSkyEdgeXloop
+0000028C                           292  
+0000028C                           293      
+0000028C  4E75                     294      rts
+0000028E                           295      
+0000028E                           296      
+Line 297 ERROR: Symbol value differs between first and second pass
+0000028E                           297  drawSky
+Line 298 ERROR: Undefined symbol
+0000028E  3239 004DBD16            298      move.w  SkyColorB, d1
+00000294  0C41 00C1                299      cmpi.w  #$00C1, d1 ; magic number, fix
+00000298  6E00 003A                300      bgt     gIncrement
+Line 301 ERROR: Undefined symbol
+0000029C  0441 BD16                301      subi.w  #SKY_CHANGER, d1
+Line 302 ERROR: Undefined symbol
+000002A0  33C1 005455B8            302      move.w  d1, SkyColorB
+000002A6                           303  
+Line 304 ERROR: Symbol value differs between first and second pass
+000002A6                           304  gIncrement
+000002A6  E189                     305      lsl.l   #$8, d1 
+Line 306 ERROR: Undefined symbol
+000002A8  3239 004DBD16            306      move.w  SkyColorG, d1
+000002AE  0C41 0061                307      cmpi.w  #$0061, d1
+000002B2  6E00 003A                308      bgt     rIncrement
+Line 309 ERROR: Undefined symbol
+000002B6  0441 BD16                309      subi.w  #SKY_CHANGEG, d1
+Line 310 ERROR: Undefined symbol
+000002BA  33C1 005455B8            310      move.w  d1, SkyColorG
+000002C0                           311  
+000002C0                           312  
+Line 313 ERROR: Symbol value differs between first and second pass
+000002C0                           313  rIncrement
+000002C0  E189                     314      lsl.l   #$8, d1 
+Line 315 ERROR: Undefined symbol
+000002C2  3239 004DBD16            315      move.w  SkyColorR, d1
+000002C8  0C41 FF9F                316      cmpi.w  #$FF9F, d1
+000002CC  6E00 003A                317      bgt     skyPenColor
+Line 318 ERROR: Undefined symbol
+000002D0  0641 BD16                318      add.w   #SKY_CHANGEB, d1
+Line 319 ERROR: Undefined symbol
+000002D4  33C1 005455B8            319      move.w  d1, SkyColorR
+000002DA                           320  
+000002DA                           321  
+000002DA                           322  
+Line 323 ERROR: Symbol value differs between first and second pass
+000002DA                           323  skyPenColor
+000002DA  E089                     324      lsr.l   #$8, d1 
+Line 325 ERROR: Undefined symbol
+000002DC  2E39 004DBD16            325      move.l  LastSkyColor, d7
+Line 326 ERROR: Undefined symbol
+000002E2  23C1 005455B8            326      move.l  d1, LastSkyColor
+Line 327 ERROR: Undefined symbol
+000002E8  103C 0016                327      move.b  #SET_PEN_COLOR,d0
+000002EC  4E4F                     328      trap    #15
+Line 329 ERROR: Undefined symbol
+000002EE  103C 0016                329      move.b  #SET_FILL_COLOR,d0
+000002F2  4E4F                     330      trap    #15
+000002F4                           331  * the bulk of the sky is just a rectangle above the hills, we can draw that by just making a large box
+000002F4                           332  * that goes down the top of the hills 
+000002F4                           333      ; draw the rect
+000002F4  323C 0000                334      move.w  #0, d1 ;LX
+000002F8  343C 0000                335      move.w  #0, d2 ;UY
+000002FC  363C 0280                336      move.w  #640, d3 ; RX
+Line 337 ERROR: Invalid syntax
+00000300                           337      move.w  #HILLTOP_TOP+1, d4 ;BY
+Line 338 ERROR: Undefined symbol
+00000300  103C 0016                338      move.b  #DRAW_RECT,d0
+00000304  4E4F                     339      trap    #15
+00000306                           340      
+00000306                           341      
+00000306                           342  * fill in the hill crevices by looping through each column of pixels
+00000306                           343  * the edge of the hill is stored in memory, we'll retrieve each y pos and draw a line from 
+00000306                           344  * the bottom of the box to the top of the hill
+00000306                           345  
+00000306  7200                     346      move.l  #0, d1 ; d1 = x pos
+Line 347 ERROR: Undefined symbol
+00000308  103C 0016                347      move.b  #DRAW_LINE,d0
+Line 348 ERROR: Undefined symbol
+0000030C  2A3C 004DBD16            348      move.l  #SCREEN_WIDTH, d5 ; d4 = x loops
+Line 349 ERROR: Undefined symbol
+00000312  43F9 004DBD16            349      lea     SkyEdgeLocation, a1
+Line 350 ERROR: Invalid syntax
+00000318                           350      move.l  #HILLTOP_TOP+2, d2 ; d2 = y startpos, y1
+Line 351 ERROR: Symbol value differs between first and second pass
+00000318                           351  skyFillInXLoop
+00000318                           352      
+00000318  3819                     353      move.w  (a1)+, d4 ; bottom y pos, y2
+0000031A  3601                     354      move.w  d1, d3 ; x2 = x1
+0000031C                           355      
+0000031C  4E4F                     356      trap    #15
+0000031E                           357  
+0000031E                           358      ; finished column, reset y vars and incrememnt x vars
+0000031E  5241                     359      addi.w  #1, d1
+00000320                           360      
+00000320  51CD 002E                361      dbra    d5, skyFillInXLoop
+00000324                           362      
+00000324  227C 00000000            363      move.l  #0, a1
+0000032A                           364      
+0000032A  4E75                     365      rts
+0000032C                           366  
+0000032C                           367  
+0000032C                           368  
+0000032C                           369  
+0000032C                           370  
+0000032C                           371  
+Line 372 WARNING: END directive missing, starting address not set
+
+103 errors detected
+1 warning generated
+
+
+SYMBOL TABLE INFORMATION
+Symbol-name         Value
+-------------------------
+CHECKSUNSET         B2
+DRAWSKY             2BC
+DRAWSKYINIT         202
+DRAWSUN             CE
+FINDSKYEDGEXLOOP    28E
+FINDSKYEDGEYLOOP    294
+FINISHYFINDEDGELOOP  2A4
+GINCREMENT          2D4
+GINCREMENTINIT      21A
+INITBACKGROUND      0
+RINCREMENT          2EE
+RINCREMENTINIT      234
+SKYFILLINXLOOP      350
+SKYPENCOLOR         308
+SKYPENCOLORINIT     24E
+SUNSETENDGAME       C4
+UPDATEBACKGROUND    96
+UPDATESUN           A4

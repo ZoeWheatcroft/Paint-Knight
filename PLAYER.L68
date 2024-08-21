@@ -1,0 +1,1076 @@
+00001000 Starting Address
+Assembler used: EASy68K Editor/Assembler v5.16.01
+Created On: 6/21/2023 5:12:10 PM
+
+00000000                             1  *-----------------------------------------------------------
+00000000                             2  * Title      : Player
+00000000                             3  * Written by : Zoe Wheatcroft
+00000000                             4  * Date       : 6/2/2023
+00000000                             5  * Description:
+00000000                             6  * Handles all aspects of the player, from physics to rendering 
+00000000                             7  *-----------------------------------------------------------
+00000000                             8  
+00000000                             9  
+00000000                            10  initPlayer
+00000000                            11      ; get the knight and set the initial pos 
+Line 12 ERROR: Undefined symbol
+00000000  41F9 004DBD16             12      lea     Knight,a0
+Line 13 ERROR: Undefined symbol
+00000006  243C 004DBD16             13      move.l  #KNIGHT_STARTY, d2
+Line 14 ERROR: Undefined symbol
+0000000C  0482 004DBD16             14      sub.l   #KNIGHT_HEIGHT, d2 ; y pos w/ account for knight height
+Line 15 ERROR: Undefined symbol
+00000012  263C 004DBD16             15      move.l  #KNIGHT_WIDTH, d3 
+00000018  E24B                      16      lsr.w     #$1, d3 ; div d3 by 2?
+Line 17 ERROR: Undefined symbol
+0000001A  283C 004DBD16             17      move.l  #KNIGHT_STARTX, d4 
+00000020  9883                      18      sub.l   d3, d4 ; d4 = x pos w/ account for width
+00000022  E18C                      19      lsl.l   #$8, d4
+00000024  E18C                      20      lsl.l   #$8, d4
+Line 21 ERROR: Undefined symbol
+00000026  2144 55B8                 21      move.l  d4, KNIGHT_XPOS(a0)
+0000002A  E18A                      22      lsl.l   #$8, d2
+0000002C  E18A                      23      lsl.l   #$8, d2
+Line 24 ERROR: Undefined symbol
+0000002E  2142 55B8                 24      move.l  d2, KNIGHT_YPOS(a0)
+00000032  4282                      25      clr.l     d2
+Line 26 ERROR: Undefined symbol
+00000034  2142 55CC                 26      move.l  d2, KNIGHT_XVEL(A0) ; set velocity to 0
+Line 27 ERROR: Undefined symbol
+00000038  2142 55B8                 27      move.l  d2, KNIGHT_YVEL(a0)
+Line 28 ERROR: Undefined symbol
+0000003C  317C BD16 55B8            28      move.w  #KNIGHT_STARTHP, KNIGHT_HP(a0)
+00000042                            29      
+00000042                            30      ; get the bit map we're rendering 
+Line 31 ERROR: Undefined symbol
+00000042  43F9 004DBD16             31      lea     Knight_bmp, a1
+00000048  2F09                      32      move.l  a1, -(sp)
+0000004A                            33      ; starting top left corner of chunk
+0000004A  303C 0000                 34      move.w  #000, d0 ; x
+0000004E  E188                      35      lsl.l     #$8, d0
+00000050  E188                      36      lsl.l     #$8, d0
+00000052  303C 0000                 37      move.w  #000, d0 ; y
+00000056  2F00                      38      move.l  d0, -(sp)
+00000058                            39  
+00000058                            40      ; set the width and height of what we want to render
+Line 41 ERROR: Undefined symbol
+00000058  2F3C 004DBD16             41      move.l  #KNIGHT_WIDTH,-(sp) ; d3 = width of chunk
+Line 42 ERROR: Undefined symbol
+0000005E  2F3C 004DBD16             42      move.l  #KNIGHT_HEIGHT,-(sp) ; d4 = chunk height
+00000064                            43  
+Line 44 ERROR: Undefined symbol
+00000064  2028 BD16                 44      move.l  KNIGHT_XPOS(a0),d0 ; x
+Line 45 ERROR: Undefined symbol
+00000068  2228 BD16                 45      move.l  KNIGHT_YPOS(a0),d1 ; y
+0000006C  E089                      46      lsr.l     #$8, d1
+0000006E  E089                      47      lsr.l     #$8, d1
+00000070  3001                      48      move.w  d1, d0
+00000072  2F00                      49      move.l  d0, -(sp) ; where to draw it
+00000074  2F29 001C                 50      move.l  $1c(a1),-(sp) ; d6 = 32/24 bit color
+Line 51 ERROR: Undefined symbol
+00000078  4EB9 004DBD16             51      jsr     displayChunk
+0000007E  DFFC 00000018             52      add.l   #24, sp
+00000084                            53      
+00000084                            54      ; set the state to 0
+Line 55 ERROR: Undefined symbol
+00000084  41F9 004DBD16             55      lea     Knight, a0
+Line 56 ERROR: Undefined symbol
+0000008A  317C BD16 55B8            56      move.w  #KNIGHT_IDLE, KNIGHT_STATE(a0)
+00000090                            57      
+00000090  4E75                      58      rts
+00000092                            59      
+00000092                            60      
+00000092                            61  updatePlayer
+Line 62 ERROR: Undefined symbol
+00000092  41F9 004DBD16             62      lea     Knight, a0
+Line 63 ERROR: Undefined symbol
+00000098  23E8 BD16 005455B8        63      move.l  KNIGHT_XPOS(a0),KnightLastXPos
+Line 64 ERROR: Undefined symbol
+000000A0  23E8 BD16 005455B8        64      move.l  KNIGHT_YPOS(a0),KnightLastYPos
+000000A8  4EB9 000003FA             65      jsr     getPlayerInput
+000000AE                            66      
+000000AE  4EB9 000000D6             67      jsr     checkPlayerNeedInval
+000000B4  0C47 0000                 68      cmpi.w  #0, d7
+000000B8  6700 0008                 69      beq     dontInvalPlayer
+000000BC  4EB9 00000210             70      jsr     invalPlayer
+000000C2                            71  dontInvalPlayer
+000000C2  4EB9 0000014A             72      jsr     invalHealth
+000000C8  4EB9 0000030A             73      jsr     handlePlayerAttack
+000000CE  4EB9 0000011E             74      jsr     checkPlayerAlive
+000000D4  4E75                      75      rts
+000000D6                            76      
+000000D6                            77  
+000000D6                            78  checkPlayerNeedInval
+Line 79 ERROR: Undefined symbol
+000000D6  41F9 004DBD16             79      lea     Knight, a0
+Line 80 ERROR: Undefined symbol
+000000DC  2228 BD16                 80      move.l  KNIGHT_XPOS(a0),d1
+Line 81 ERROR: Undefined symbol
+000000E0  2039 004DBD16             81      move.l  KnightLastXPos, d0
+000000E6  B280                      82      cmp.l   d0, d1
+000000E8  6600 0028                 83      bne     returnPlayerNeedInval
+Line 84 ERROR: Undefined symbol
+000000EC  2228 BD16                 84      move.l  KNIGHT_YPOS(a0),d1
+Line 85 ERROR: Undefined symbol
+000000F0  2039 004DBD16             85      move.l  KnightLastYPos, d0
+000000F6  B280                      86      cmp.l   d0, d1
+000000F8  6600 0018                 87      bne     returnPlayerNeedInval    
+000000FC                            88      ; x and y are the same, check if state changed
+Line 89 ERROR: Undefined symbol
+000000FC  2039 004DBD16             89      move.l  KnightLastState, d0
+Line 90 ERROR: Undefined symbol
+00000102  2228 BD16                 90      move.l  KNIGHT_STATE(a0),d1
+00000106  B280                      91      cmp.l   d0, d1
+00000108  6600 0008                 92      bne     returnPlayerNeedInval
+Line 93 ERROR: Undefined symbol
+0000010C  23C1 005455B8             93      move.l  d1, KnightLastState
+00000112                            94      
+00000112                            95  returnPlayerNeedInval
+00000112  3E3C 0001                 96      move.w  #1, d7
+00000116  4E75                      97      rts
+00000118                            98  returnPlayerNoInval
+00000118  3E3C 0000                 99      move.w  #0, d7
+0000011C  4E75                     100      rts
+0000011E                           101  
+0000011E                           102  * check if the player is alive and update the gamestate if so    
+0000011E                           103  checkPlayerAlive
+Line 104 ERROR: Undefined symbol
+0000011E  41F9 004DBD16            104      lea     Knight, a0
+Line 105 ERROR: Undefined symbol
+00000124  3028 BD16                105      move.w  KNIGHT_HP(a0),d0
+00000128  B07C 0000                106      cmp.w   #0, d0
+0000012C  6700 0012                107      beq     killPlayer
+Line 108 ERROR: Undefined symbol
+00000130  2028 BD16                108      move.l  KNIGHT_YPOS(a0),d0 ; check if the player fell off, L, ratio, etc
+00000134  4840                     109      swap    d0
+Line 110 ERROR: Undefined symbol
+00000136  0C40 BD16                110      cmpi.w  #SCREEN_HEIGHT,d0
+0000013A  6E00 0004                111      bgt     killPlayer
+0000013E  4E75                     112      rts
+00000140                           113  killPlayer
+Line 114 ERROR: Undefined symbol
+00000140  33FC BD16 005455B8       114      move.w  #PLAYER_LOST, GameState
+00000148  4E75                     115      rts
+0000014A                           116  
+0000014A                           117  invalHealth 
+Line 118 ERROR: Undefined symbol
+0000014A  45F9 004DBD16            118      lea  KnightLastHP, a2
+00000150  3012                     119      move.w  (a2),d0
+Line 120 ERROR: Undefined symbol
+00000152  41F9 004DBD16            120      lea     Knight, a0
+Line 121 ERROR: Undefined symbol
+00000158  3E28 BD16                121      move.w  KNIGHT_HP(a0),d7
+0000015C  BE40                     122      cmp.w   d0, d7
+0000015E  6700 00A2                123      beq     invalHealthReturn
+00000162                           124  
+Line 125 ERROR: Undefined symbol
+00000162  3A3C BD16                125      move.w  #HEART_START_X, d5
+Line 126 ERROR: Undefined symbol
+00000166  3C3C BD16                126      move.w  #KNIGHT_STARTHP, d6
+0000016A  5346                     127      subi.w  #1, d6 ; compensate for dbra
+0000016C                           128  
+0000016C                           129  invalHealthLoop
+0000016C  BC47                     130      cmp     d7, d6 ; check if this heart should be full
+0000016E  6C00 0048                131      bge     invalHealthEmpty
+00000172                           132      * Draw a full heart
+Line 133 ERROR: Undefined symbol
+00000172  43F9 004DBD16            133      lea     Heart, a1
+00000178  2F09                     134      move.l  a1, -(sp)
+0000017A                           135      ; starting top left corner of chunk
+0000017A  303C 0000                136      move.w  #000, d0 ; x
+0000017E  E188                     137      lsl.l     #$8, d0
+00000180  E188                     138      lsl.l     #$8, d0
+00000182  303C 0000                139      move.w  #000, d0 ; y
+00000186  2F00                     140      move.l  d0, -(sp)
+00000188                           141  
+00000188                           142      ; set the width and height of what we want to render
+Line 143 ERROR: Undefined symbol
+00000188  2F3C 004DBD16            143      move.l  #HEART_WIDTH,-(sp) ; d3 = width of chunk
+Line 144 ERROR: Undefined symbol
+0000018E  2F3C 004DBD16            144      move.l  #HEART_HEIGHT,-(sp) ; d4 = chunk height
+00000194                           145  
+00000194  2005                     146      move.l  d5,d0 ; x
+Line 147 ERROR: Undefined symbol
+00000196  223C 004DBD16            147      move.l  #HEART_START_Y,d1 ; y
+0000019C  E188                     148      lsl.l     #$8, d0
+0000019E  E188                     149      lsl.l     #$8, d0
+000001A0  3001                     150      move.w  d1, d0
+000001A2  2F00                     151      move.l  d0, -(sp) ; where to draw it
+000001A4  2F29 001C                152      move.l  $1c(a1),-(sp) ; d6 = 32/24 bit color
+Line 153 ERROR: Undefined symbol
+000001A8  4EB9 004DBD16            153      jsr     displayChunk
+000001AE  DFFC 00000018            154      add.l   #24, sp
+000001B4  6000 0044                155      bra     invalHealthLoopIncrement
+000001B8                           156  invalHealthEmpty
+Line 157 ERROR: Undefined symbol
+000001B8  43F9 004DBD16            157      lea     Heart, a1
+000001BE  2F09                     158      move.l  a1, -(sp)
+000001C0                           159      ; starting top left corner of chunk
+Line 160 ERROR: Undefined symbol
+000001C0  303C BD16                160      move.w  #HEART_WIDTH, d0 ; x
+000001C4  E188                     161      lsl.l     #$8, d0
+000001C6  E188                     162      lsl.l     #$8, d0
+000001C8  303C 0000                163      move.w  #000, d0 ; y
+000001CC  2F00                     164      move.l  d0, -(sp)
+000001CE                           165  
+000001CE                           166      ; set the width and height of what we want to render
+Line 167 ERROR: Undefined symbol
+000001CE  2F3C 004DBD16            167      move.l  #HEART_WIDTH,-(sp) ; d3 = width of chunk
+Line 168 ERROR: Undefined symbol
+000001D4  2F3C 004DBD16            168      move.l  #HEART_HEIGHT,-(sp) ; d4 = chunk height
+000001DA                           169  
+000001DA  2005                     170      move.l  d5,d0 ; x
+Line 171 ERROR: Undefined symbol
+000001DC  223C 004DBD16            171      move.l  #HEART_START_Y,d1 ; y
+000001E2  E188                     172      lsl.l     #$8, d0
+000001E4  E188                     173      lsl.l     #$8, d0
+000001E6  3001                     174      move.w  d1, d0
+000001E8  2F00                     175      move.l  d0, -(sp) ; where to draw it
+000001EA  2F29 001C                176      move.l  $1c(a1),-(sp) ; d6 = 32/24 bit color
+Line 177 ERROR: Undefined symbol
+000001EE  4EB9 004DBD16            177      jsr     displayChunk
+000001F4  DFFC 00000018            178      add.l   #24, sp
+000001FA                           179  
+000001FA                           180  invalHealthLoopIncrement
+Line 181 ERROR: Undefined symbol
+000001FA  0645 BD16                181      addi.w   #HEART_SPACING, d5   
+000001FE  51CE FF6C                182      dbra    d6, invalHealthLoop
+00000202                           183  invalHealthReturn
+Line 184 ERROR: Undefined symbol
+00000202  41F9 004DBD16            184      lea     Knight,a0
+Line 185 ERROR: Undefined symbol
+00000208  3028 BD16                185      move.w  KNIGHT_HP(a0),d0
+0000020C  3480                     186      move.w  d0,(a2)
+0000020E  4E75                     187      rts
+00000210                           188      
+00000210                           189  invalPlayer
+Line 190 ERROR: Undefined symbol
+00000210  43F9 004DBD16            190      lea     Hills, a1
+00000216  2F09                     191      move.l  a1, -(sp)
+00000218                           192      ; starting top left corner of chunk
+Line 193 ERROR: Undefined symbol
+00000218  2039 004DBD16            193      move.l     KnightLastXPos, d0
+Line 194 ERROR: Undefined symbol
+0000021E  2239 004DBD16            194      move.l     KnightLastYPos, d1
+00000224  E089                     195      lsr.l     #$8, d1
+00000226  E089                     196      lsr.l     #$8, d1
+00000228  3001                     197      move.w  d1, d0
+0000022A  2F00                     198      move.l  d0, -(sp)
+0000022C                           199      
+0000022C                           200      ; set the width and height of what we want to render
+Line 201 ERROR: Undefined symbol
+0000022C  2F3C 004DBD16            201      move.l  #KNIGHT_WIDTH,-(sp) ; d3 = width of chunk
+Line 202 ERROR: Undefined symbol
+00000232  2F3C 004DBD16            202      move.l  #KNIGHT_HEIGHT,-(sp) ; d4 = chunk height
+00000238                           203      
+Line 204 ERROR: Undefined symbol
+00000238  41F9 004DBD16            204      lea     KnightLastXPos, a0
+Line 205 ERROR: Undefined symbol
+0000023E  45F9 004DBD16            205      lea     KnightLastYPos, a2
+00000244  2010                     206      move.l  (a0),d0 ; x
+00000246  2212                     207      move.l  (a2),d1 ; y
+00000248  E089                     208      lsr.l     #$8, d1
+0000024A  E089                     209      lsr.l     #$8, d1
+0000024C  3001                     210      move.w  d1, d0
+0000024E  2F00                     211      move.l  d0, -(sp) ; where to draw it
+00000250  2F29 001C                212      move.l  $1c(a1),-(sp) ; d6 = 32/24 bit color
+Line 213 ERROR: Undefined symbol
+00000254  4EB9 004DBD16            213      jsr     displayChunk
+0000025A  DFFC 00000018            214      add.l   #24, sp
+00000260                           215      
+Line 216 ERROR: Undefined symbol
+00000260  2039 004DBD16            216      move.l  EnemyToRedraw, d0
+00000266  0C80 00000000            217      cmpi.l  #0, d0 ; is enemy to redraw null
+0000026C  6700 004C                218      beq     drawPlayer ; if enemy == null, dont draw
+00000270                           219  invalPlayerEnemy
+00000270  2040                     220      move.l  d0, a0
+Line 221 ERROR: Undefined symbol
+00000272  43F9 004DBD16            221      lea     Enemy_bmp, a1
+00000278  2F09                     222      move.l  a1, -(sp)
+0000027A                           223      ; starting top left corner of chunk
+Line 224 ERROR: Undefined symbol
+0000027A  3028 BD16                224      move.w      ENEMY_STATE(a0),d0
+Line 225 ERROR: Undefined symbol
+0000027E  C0FC BD16                225      mulu.w      #ENEMY_WIDTH, d0
+00000282  323C 0000                226      move.w     #0,d1 ; y
+00000286  E188                     227      lsl.l     #$8, d0
+00000288  E188                     228      lsl.l     #$8, d0
+0000028A  3001                     229      move.w  d1, d0
+0000028C  2F00                     230      move.l  d0, -(sp)
+0000028E                           231      
+0000028E                           232      ; set the width and height of what we want to render
+Line 233 ERROR: Undefined symbol
+0000028E  2F3C 004DBD16            233      move.l  #ENEMY_WIDTH,-(sp) ; d3 = width of chunk
+Line 234 ERROR: Undefined symbol
+00000294  2F3C 004DBD16            234      move.l  #ENEMY_HEIGHT,-(sp) ; d4 = chunk height
+0000029A                           235      
+Line 236 ERROR: Undefined symbol
+0000029A  2028 BD16                236      move.l  ENEMY_X(a0),d0 ; x
+Line 237 ERROR: Undefined symbol
+0000029E  2228 BD16                237      move.l  ENEMY_Y(a0),d1 ; y
+000002A2  E089                     238      lsr.l     #$8, d1
+000002A4  E089                     239      lsr.l     #$8, d1
+000002A6  3001                     240      move.w  d1, d0
+000002A8  2F00                     241      move.l  d0, -(sp) ; where to draw it
+000002AA  2F29 001C                242      move.l  $1c(a1),-(sp) ; d6 = 32/24 bit color
+Line 243 ERROR: Undefined symbol
+000002AE  4EB9 004DBD16            243      jsr     displayChunk
+000002B4  DFFC 00000018            244      add.l   #24, sp
+000002BA                           245      
+000002BA                           246  drawPlayer
+000002BA                           247      ; get the bit map we're rendering 
+Line 248 ERROR: Undefined symbol
+000002BA  43F9 004DBD16            248      lea     Knight_bmp, a1
+Line 249 ERROR: Undefined symbol
+000002C0  41F9 004DBD16            249      lea     Knight,a0
+000002C6  2F09                     250      move.l  a1, -(sp)
+000002C8                           251      ; starting top left corner of chunk
+Line 252 ERROR: Undefined symbol
+000002C8  3228 BD16                252      move.w  KNIGHT_STATE(a0),d1
+Line 253 ERROR: Undefined symbol
+000002CC  C2FC BD16                253      mulu.w  #KNIGHT_WIDTH, d1
+000002D0  3001                     254      move.w  d1, d0 ; x
+000002D2  E188                     255      lsl.l     #$8, d0
+000002D4  E188                     256      lsl.l     #$8, d0
+000002D6  303C 0000                257      move.w  #000, d0 ; y
+000002DA  2F00                     258      move.l  d0, -(sp)
+000002DC                           259      
+000002DC                           260      ; set the width and height of what we want to render
+Line 261 ERROR: Undefined symbol
+000002DC  2F3C 004DBD16            261      move.l  #KNIGHT_WIDTH,-(sp) ; d3 = width of chunk
+Line 262 ERROR: Undefined symbol
+000002E2  2F3C 004DBD16            262      move.l  #KNIGHT_HEIGHT,-(sp) ; d4 = chunk height
+000002E8                           263      
+Line 264 ERROR: Undefined symbol
+000002E8  2028 BD16                264      move.l  KNIGHT_XPOS(a0),d0 ; x
+Line 265 ERROR: Undefined symbol
+000002EC  2228 BD16                265      move.l  KNIGHT_YPOS(a0),d1 ; y
+000002F0  E089                     266      lsr.l     #$8, d1
+000002F2  E089                     267      lsr.l     #$8, d1
+000002F4  3001                     268      move.w  d1, d0
+000002F6  2F00                     269      move.l  d0, -(sp) ; where to draw it
+000002F8  2F29 001C                270      move.l  $1c(a1),-(sp) ; d6 = 32/24 bit color
+Line 271 ERROR: Undefined symbol
+000002FC  4EB9 004DBD16            271      jsr     displayChunk
+00000302  DFFC 00000018            272      add.l   #24, sp
+00000308  4E75                     273      rts
+0000030A                           274      
+0000030A                           275  
+0000030A                           276  * Because it uses entirely different input than movement and functions vastly differently, 
+0000030A                           277  * player attack has its own method to handle the input, collisions and resizing involved
+0000030A                           278  handlePlayerAttack
+Line 279 ERROR: Undefined symbol
+0000030A  41F9 004DBD16            279      lea     Knight, a0
+00000310  4280                     280      clr.l   d0
+Line 281 ERROR: Undefined symbol
+00000312  3028 BD16                281      move.w  KNIGHT_STATE(a0),d0
+00000316  E548                     282      lsl.w   #2, d0 ; multiply by 4 so we can use the virtual table
+Line 283 ERROR: Undefined symbol
+00000318  43F9 004DBD16            283      lea     KnightAttackFunctionTable, a1
+0000031E  2471 0000                284      move.l  (a1,d0),a2
+00000322  4E92                     285      jsr     (a2)
+00000324  4E75                     286      rts
+00000326                           287      
+00000326                           288      
+00000326                           289  idlePlayerAttack
+Line 290 ERROR: Undefined symbol
+00000326  103C 0016                290      move.b  #GET_MOUSE, d0
+Line 291 ERROR: Undefined symbol
+0000032A  123C 0016                291      move.b  #READ_MOUSE_DOWN, d1
+0000032E  4E4F                     292      trap    #15
+00000330                           293      
+00000330  0800 0000                294      btst.l  #0, d0
+00000334  6700 0010                295      beq     idlePlayerAttackReturn
+00000338                           296      
+Line 297 ERROR: Undefined symbol
+00000338  317C BD16 55B8           297      move.w  #KNIGHT_ATTACK1, KNIGHT_STATE(a0)
+Line 298 ERROR: Undefined symbol
+0000033E  33FC 0001 005455B8       298      move.w  #1, KnightAttacking
+00000346                           299  idlePlayerAttackReturn
+00000346  4E75                     300      rts
+00000348                           301  advancingPlayerAttack
+Line 302 ERROR: Undefined symbol
+00000348  317C BD16 55B8           302      move.w  #KNIGHT_ATTACK2, KNIGHT_STATE(a0)
+0000034E  4EB9 0000036C            303      jsr     swordAttack
+00000354  4E75                     304      rts
+00000356                           305  performingPlayerAttack
+Line 306 ERROR: Undefined symbol
+00000356  317C BD16 55B8           306      move.w  #KNIGHT_IDLE, KNIGHT_STATE(a0)
+Line 307 ERROR: Undefined symbol
+0000035C  33FC 0000 005455B8       307      move.w  #0, KnightAttacking
+00000364  4EB9 0000036C            308      jsr     swordAttack
+0000036A  4E75                     309      rts
+0000036C                           310      
+0000036C                           311  swordAttack
+Line 312 ERROR: Undefined symbol
+0000036C  41F9 004DBD16            312      lea     Knight, a0
+Line 313 ERROR: Undefined symbol
+00000372  43F9 004DBD16            313      lea     EnemyStart, a1
+00000378  5489                     314      adda.l  #$2, a1
+Line 315 ERROR: Undefined symbol
+0000037A  45F9 004DBD16            315      lea     EnemyEnd, a2
+00000380                           316      
+00000380                           317  swordAttackLoop
+00000380                           318      * put enemy dimension and position on stack
+Line 319 ERROR: Undefined symbol
+00000380  3029 BD16                319      move.w  ENEMY_H(a1),d0 ; h2
+00000384  2F00                     320      move.l  d0,-(sp)  
+Line 321 ERROR: Undefined symbol
+00000386  3029 BD16                321      move.w  ENEMY_W(a1),d0 ; w2
+0000038A  2F00                     322      move.l  d0,-(sp)  
+Line 323 ERROR: Undefined symbol
+0000038C  3029 BD16                323      move.w  ENEMY_Y(a1),d0 ; y2
+00000390  2F00                     324      move.l  d0,-(sp)  
+Line 325 ERROR: Undefined symbol
+00000392  3029 BD16                325      move.w  ENEMY_X(a1),d0 ; x2
+00000396  2F00                     326      move.l  d0,-(sp)  
+00000398                           327      * put sword dimension and position on stack
+Line 328 ERROR: Undefined symbol
+00000398  2F3C 004DBD16            328      move.l  #KNIGHT_SWORD_H,-(sp) ; h1
+Line 329 ERROR: Undefined symbol
+0000039E  2F3C 004DBD16            329      move.l  #KNIGHT_SWORD_W,-(sp) ; w1
+Line 330 ERROR: Undefined symbol
+000003A4  2028 BD16                330      move.l  KNIGHT_YPOS(a0),d0
+000003A8  4840                     331      swap    d0
+Line 332 ERROR: Undefined symbol
+000003AA  0640 BD16                332      addi.w  #KNIGHT_SWORD_Y,d0
+000003AE  2F00                     333      move.l  d0,-(sp) ; y1
+Line 334 ERROR: Undefined symbol
+000003B0  2028 BD16                334      move.l  KNIGHT_XPOS(a0),d0
+000003B4  4840                     335      swap    d0
+Line 336 ERROR: Undefined symbol
+000003B6  0640 BD16                336      addi.w  #KNIGHT_SWORD_X,d0
+000003BA  2F00                     337      move.l  d0,-(sp) ; x1
+000003BC                           338      
+Line 339 ERROR: Undefined symbol
+000003BC  4EB9 004DBD16            339      jsr     collide
+000003C2  DFFC 00000020            340      add.l   #$20,sp
+000003C8                           341      
+000003C8  0C07 0000                342      cmpi.b  #0, d7
+000003CC  6700 0020                343      beq     continueSwordAttackLoop
+Line 344 ERROR: Undefined symbol
+000003D0  3029 BD16                344      move.w  ENEMY_HP(a1),d0
+000003D4  0C00 0000                345      cmpi.b  #0, d0
+000003D8  6700 0014                346      beq     continueSwordAttackLoop  ; enemy is dead, do not hurt
+000003DC  5340                     347      subi.w  #1, d0
+Line 348 ERROR: Undefined symbol
+000003DE  3340 55B8                348      move.w  d0, ENEMY_HP(a1)
+Line 349 ERROR: Undefined symbol
+000003E2  337C BD16 55B8           349      move.w  #ENEMY_HURT, ENEMY_STATE(a1)
+Line 350 ERROR: Undefined symbol
+000003E8  337C 0000 55B8           350      move.w  #0, ENEMY_STATE_TIMER(a1)
+000003EE                           351  continueSwordAttackLoop
+Line 352 ERROR: Undefined symbol
+000003EE  D3FC 004DBD16            352      add.l   #ENEMY_STRUCT_SIZE, a1
+000003F4  B5C9                     353      cmp.l   a1, a2
+000003F6  6688                     354      bne     swordAttackLoop
+000003F8                           355       
+000003F8                           356  returnSwordAttack
+000003F8  4E75                     357      rts
+000003FA                           358      
+000003FA                           359  * get the input that controls the player (movement + attack)
+000003FA                           360  * d7 is the return, it is a flag that indicates if the player moved
+000003FA                           361  * this will be used to tell if the knight needs to be invaled and redone 
+000003FA                           362  getPlayerInput
+Line 363 ERROR: Undefined symbol
+000003FA  41F9 004DBD16            363      lea     Knight,a0
+00000400                           364  
+00000400                           365  
+00000400                           366      ; start by updating velocities
+Line 367 ERROR: Undefined symbol
+00000400  103C 0016                367      move.b  #GET_4KEYS, d0
+00000404  223C 4144574C            368      move.l  #'A'<<24+'D'<<16+'W'<<8+'L',D1 ; check for keypress (a,d,w,f)
+0000040A  4E4F                     369      trap    #15
+0000040C                           370      
+0000040C                           371      
+0000040C                           372      ; calculate jump velocity
+0000040C                           373      ; traditionally, we would factor in delta time
+0000040C                           374      ; however, since this is an instant force jump instead of accel, 
+0000040C                           375      ; we do not use delta time to keep jumps consistent
+Line 376 ERROR: Undefined symbol
+0000040C  283C 004DBD16            376      move.l  #KNIGHT_JUMP, d4
+00000412                           377  
+00000412                           378      
+00000412                           379      ; calculate movement acceleration
+Line 380 ERROR: Undefined symbol
+00000412  2C39 004DBD16            380      move.l  DeltaTime, d6
+Line 381 ERROR: Undefined symbol
+00000418  243C 004DBD16            381      move.l  #KNIGHT_ACCELERATION, d2
+0000041E  C547                     382      exg     d2, d7
+Line 383 ERROR: Undefined symbol
+00000420  4EB9 004DBD16            383      jsr     multiply ; d2 = accel * time, amount of accel to add
+00000426  C547                     384      exg     d2, d7
+00000428                           385  
+00000428                           386      
+00000428                           387      
+00000428  4285                     388      clr.l     d5
+0000042A  4280                     389      clr.l     d0 ; d0 will act as a flag for if a was pressed
+0000042C  4287                     390      clr.l     d7 ; flag for if d was pressed
+0000042E                           391      ; check for a 
+0000042E  0801 0018                392      btst.l  #24, d1
+00000432  6700 0014                393      beq     getPlayerInputD
+Line 394 ERROR: Undefined symbol
+00000436  2628 BD16                394      move.l  KNIGHT_XVEL(a0),d3
+0000043A  9682                     395      sub.l   d2, d3
+Line 396 ERROR: Undefined symbol
+0000043C  2143 55B8                396      move.l  d3, KNIGHT_XVEL(a0)
+00000440  1A3C 0001                397      move.b  #1, d5
+00000444  103C 0001                398      move.b  #1, d0
+00000448                           399      
+00000448                           400  getPlayerInputD
+00000448                           401      ; check for d 
+00000448  0801 0010                402      btst.l  #16, d1
+0000044C  6700 0014                403      beq     handleXVelocityInput
+Line 404 ERROR: Undefined symbol
+00000450  2628 BD16                404      move.l  KNIGHT_XVEL(a0),d3
+00000454  D682                     405      add.l   d2, d3
+Line 406 ERROR: Undefined symbol
+00000456  2143 55B8                406      move.l  d3, KNIGHT_XVEL(a0)
+0000045A  1A3C 0001                407      move.b  #1, d5
+0000045E  1E3C 0001                408      move.b  #1, d7
+00000462                           409      
+00000462                           410  handleXVelocityInput
+00000462                           411  * if we got a but the curr vel is positive, switch the sign 
+00000462                           412  * if we got d but the curr vel is neg, switch the sign
+00000462  BE00                     413      cmp.b   d0,d7 ; if got both or neither, skip
+00000464  6700 002E                414      beq     getPlayerInputW 
+00000468                           415      ; cur x vel is in d3
+00000468  0C00 0000                416      cmpi.b  #0, d0
+0000046C  6700 0016                417      beq     handleXVelocityInputD ; got d, handle accordingly
+00000470                           418      ; got a, velocity should be negative
+00000470  0C83 00000000            419      cmpi.l  #0, d3
+00000476                           420      ; if d3 < 0, branch, nothing to do
+00000476  6D00 001C                421      blt     getPlayerInputW
+0000047A  4483                     422      neg.l     d3
+Line 423 ERROR: Undefined symbol
+0000047C  2143 55B8                423      move.l  d3, KNIGHT_XVEL(a0)
+00000480  6000 0012                424      bra     getPlayerInputW 
+00000484                           425      
+00000484                           426  handleXVelocityInputD
+00000484                           427      ; got d, velocity should be pos
+00000484  0C83 00000000            428      cmpi.l  #0, d3
+0000048A  6E00 0008                429      bgt     getPlayerInputW ; if already positive, nothing to do
+0000048E  4483                     430      neg.l     d3
+Line 431 ERROR: Undefined symbol
+00000490  2143 55B8                431      move.l  d3, KNIGHT_XVEL(a0)
+00000494                           432      
+00000494                           433  
+00000494                           434  getPlayerInputW
+00000494                           435      ; check for w 
+00000494  4200                     436      clr.b   d0
+00000496  0801 0008                437      btst.l  #8, d1
+0000049A  6700 002C                438      beq     addPlayerGravity
+Line 439 ERROR: Undefined symbol
+0000049E  3239 004DBD16            439      move.w  KnightGrounded, d1
+000004A4  0C01 0000                440      cmpi.b  #0, d1
+000004A8  6700 001E                441      beq     addPlayerGravity ; player can't jump if not grounded
+000004AC  4240                     442      clr.w   d0
+Line 443 ERROR: Undefined symbol
+000004AE  33C0 005455CC            443      move.w  d0, KnightGrounded ; set grounded to false
+000004B4  103C 0001                444      move.b  #1, d0 ; switch on flag for jump
+000004B8  4280                     445      clr.l   d0
+Line 446 ERROR: Undefined symbol
+000004BA  2140 55E8                446      move.l  d0, KNIGHT_YVEL(a0) ; clear the y velocity to create a clean and consistent jump
+Line 447 ERROR: Undefined symbol
+000004BE  2628 BD16                447      move.l  KNIGHT_YVEL(a0),d3 ; add the jump to velocity
+000004C2  9684                     448      sub.l   d4, d3
+Line 449 ERROR: Undefined symbol
+000004C4  2143 55B8                449      move.l  d3, KNIGHT_YVEL(a0)
+000004C8                           450     ; bra     checkXPlayerInput
+000004C8                           451  
+000004C8                           452  
+000004C8                           453  addPlayerGravity
+Line 454 ERROR: Undefined symbol
+000004C8  283C 004DBD16            454      move.l  #GRAVITY_SCALE, d4
+000004CE                           455      ; because gravity is acceleration, we multiply it by delta time
+000004CE  C947                     456      exg     d4, d7
+Line 457 ERROR: Undefined symbol
+000004D0  4EB9 004DBD16            457      jsr     multiply
+000004D6  C947                     458      exg     d4, d7
+Line 459 ERROR: Undefined symbol
+000004D8  2628 BD16                459      move.l  KNIGHT_YVEL(a0),d3
+000004DC  D684                     460      add.l   d4, d3
+Line 461 ERROR: Undefined symbol
+000004DE  2143 55B8                461      move.l  d3, KNIGHT_YVEL(a0)
+000004E2                           462  
+000004E2                           463  checkXPlayerInput
+000004E2                           464      ; use the updated velocities to move the player 
+000004E2  4247                     465      clr     d7 ; d7 = flag for moved
+000004E4                           466      ; if no a/d input, set xvel to 0
+000004E4  0C05 0000                467      cmpi.b  #0, d5
+000004E8  6600 0006                468      bne     movePlayerX
+Line 469 ERROR: Undefined symbol
+000004EC  2145 55B8                469      move.l  d5, KNIGHT_XVEL(a0)
+000004F0                           470      
+000004F0                           471  movePlayerX
+Line 472 ERROR: Undefined symbol
+000004F0  2228 BD16                472      move.l  KNIGHT_XVEL(a0),d1
+000004F4                           473      
+000004F4                           474      ; clamp velocity to knight speed 
+000004F4  C347                     475      exg     d1, d7
+Line 476 ERROR: Undefined symbol
+000004F6  2F3C 004DBD16            476      move.l  #KNIGHT_SPEED, -(sp)
+Line 477 ERROR: Undefined symbol
+000004FC  2F3C 004DBD16            477      move.l  #-KNIGHT_SPEED, -(sp)
+Line 478 ERROR: Undefined symbol
+00000502  4EB9 004DBD16            478      jsr     clamp
+00000508  508F                     479      add.l   #8, sp
+0000050A  C347                     480      exg     d1, d7
+0000050C                           481      
+0000050C  C347                     482      exg     d1, d7
+Line 483 ERROR: Undefined symbol
+0000050E  4EB9 004DBD16            483      jsr     multiply
+00000514  C347                     484      exg     d1, d7
+00000516                           485      
+Line 486 ERROR: Undefined symbol
+00000516  2428 BD16                486      move.l  KNIGHT_XPOS(a0),d2
+0000051A  D481                     487      add.l   d1, d2
+0000051C                           488      
+0000051C                           489  
+0000051C                           490  movePlayerY
+Line 491 ERROR: Undefined symbol
+0000051C  2228 BD16                491      move.l  KNIGHT_YVEL(a0),d1
+Line 492 ERROR: Undefined symbol
+00000520  2C39 004DBD16            492      move.l  DeltaTime, d6
+00000526  C347                     493      exg     d1, d7
+Line 494 ERROR: Undefined symbol
+00000528  4EB9 004DBD16            494      jsr     multiply
+0000052E  C347                     495      exg     d1, d7
+Line 496 ERROR: Undefined symbol
+00000530  2628 BD16                496      move.l  KNIGHT_YPOS(a0),d3
+00000534  D681                     497      add.l   d1, d3
+00000536                           498      
+00000536                           499  checkCollision
+00000536                           500      ; prepare to skip ground check if d0 = 1 (pressed jump)
+00000536                           501      ; if don't skip ground check, the player detect ground and stop
+00000536  0C00 0001                502      cmpi.b  #1, d0 ; was jump pressed?
+0000053A  6700 0066                503      beq     playerCeilingCheck ; if yes, skip ground check
+0000053E                           504      
+0000053E                           505  playerGroundCheck
+Line 506 ERROR: Undefined symbol
+0000053E  43F9 004DBD16            506      lea     BlockStart,a1
+00000544  5489                     507      adda.l  #$2, a1
+Line 508 ERROR: Undefined symbol
+00000546  45F9 004DBD16            508      lea     BlockEnd, a2
+0000054C                           509      
+0000054C                           510  groundCheckLoop
+0000054C  2F09                     511      move.l  a1,-(sp)
+0000054E  2F03                     512      move.l  d3,-(sp) ; move new y pos on stack
+00000550  2F02                     513      move.l  d2,-(sp) ; move new x pos on stack
+00000552                           514      
+00000552  4EB9 00000674            515      jsr     playerCollideYDown ; check for ground
+00000558                           516      
+00000558  241F                     517      move.l  (sp)+,d2
+0000055A  261F                     518      move.l  (sp)+,d3
+0000055C  588F                     519      add.l   #4, sp ; compensate for address put on sp
+0000055E                           520      
+0000055E  0C07 0000                521      cmpi.b  #0, d7 ; 0 = collided, 1 = no collision
+00000562  6700 001A                522      beq     playerIsGrounded ; if collided, leave loop and set vars
+00000566                           523      
+00000566                           524      ; did not hit ground yet
+Line 525 ERROR: Undefined symbol
+00000566  D3FC 004DBD16            525      adda.l  #BLOCK_DATA_SIZE, a1 ; increase a1 to next block
+0000056C  B4C9                     526      cmp     a1, a2 ; is current address at the end? 
+0000056E  66DC                     527      bne     groundCheckLoop ; if address!=end, loop
+00000570                           528      
+00000570                           529      
+00000570  303C 0000                530      move.w  #0, d0
+Line 531 ERROR: Undefined symbol
+00000574  33C0 005455D0            531      move.w  d0, KnightGrounded ; set grounded to 0, false
+0000057A  6000 0026                532      bra     playerCeilingCheck ; not grounded, check ceiling 
+0000057E                           533  playerIsGrounded
+0000057E  303C 0001                534      move.w  #1, d0 ; set grounded to 1, true
+Line 535 ERROR: Undefined symbol
+00000582  33C0 005455B8            535      move.w  d0, KnightGrounded
+00000588  4280                     536      clr.l   d0
+0000058A                           537      ; snap the player to the ground under them
+0000058A  3029 0002                538      move.w  2(a1),d0 ; get the top of what was collided with
+0000058E                           539      ;subi.w  #1,d0 ; subtract one so that we're over it
+Line 540 ERROR: Undefined symbol
+0000058E  0440 BD16                540      subi.w  #KNIGHT_HEIGHT, d0 ; offset by the player height
+00000592  4840                     541      swap    d0 ; align it with knight ypos formatting
+Line 542 ERROR: Undefined symbol
+00000594  2140 55CC                542      move.l  d0, KNIGHT_YPOS(a0) ; snap player to ground
+00000598  4280                     543      clr.l   d0
+Line 544 ERROR: Undefined symbol
+0000059A  2140 55CC                544      move.l  d0, KNIGHT_YVEL(a0) ; reset player y vel 
+0000059E  6000 0056                545      bra     checkCollisionX ; if grounded, skip check for ceiling
+000005A2                           546      
+000005A2                           547  playerCeilingCheck
+Line 548 ERROR: Undefined symbol
+000005A2  43F9 004DBD16            548      lea     BlockStart,a1
+000005A8  5489                     549      adda.l  #$2, a1
+Line 550 ERROR: Undefined symbol
+000005AA  45F9 004DBD16            550      lea     BlockEnd, a2
+000005B0                           551      
+000005B0                           552  ceilingCheckLoop
+000005B0  2F09                     553      move.l  a1,-(sp)
+000005B2  2F03                     554      move.l  d3,-(sp) ; move new y pos on stack
+000005B4  2F02                     555      move.l  d2,-(sp) ; move new x pos on stack
+000005B6                           556      
+000005B6  4EB9 00000638            557      jsr     playerCollideYUp ; check for ceiling above
+000005BC                           558      
+000005BC  241F                     559      move.l  (sp)+,d2
+000005BE  261F                     560      move.l  (sp)+,d3
+000005C0  588F                     561      add.l   #4, sp ; compensate for address put on sp
+000005C2                           562      
+000005C2  0C07 0000                563      cmpi.b  #0, d7 ; 0 = collided, 1 = no collision
+000005C6  6700 0014                564      beq     ceilingCollision ; if collided, leave loop and set vars
+000005CA                           565      
+000005CA                           566      ; did not hit ground yet
+Line 567 ERROR: Undefined symbol
+000005CA  D3FC 004DBD16            567      adda.l  #BLOCK_DATA_SIZE, a1 ; increase a1 to next block
+000005D0  B4C9                     568      cmp     a1, a2 ; is current address at the end? 
+000005D2  66DC                     569      bne     ceilingCheckLoop ; if address!=end, loop
+000005D4                           570  
+Line 571 ERROR: Undefined symbol
+000005D4  2143 55C4                571      move.l  d3, KNIGHT_YPOS(a0) ; advance position 
+000005D8  6000 001C                572      bra     checkCollisionX
+000005DC                           573  
+000005DC                           574  ceilingCollision
+000005DC                           575      ; yowza we collided
+000005DC  4280                     576      clr.l   d0
+Line 577 ERROR: Undefined symbol
+000005DE  2140 55B8                577      move.l  d0, KNIGHT_YVEL(a0)
+000005E2                           578      ; snap to the ceiling
+000005E2  4280                     579      clr.l   d0 
+Line 580 ERROR: Undefined symbol
+000005E4  3029 BD16                580      move.w  BLOCK_Y(a1),d0
+Line 581 ERROR: Undefined symbol
+000005E8  3229 BD16                581      move.w  BLOCK_H(a1),d1
+000005EC  D041                     582      add.w   d1, d0 ; bottom edge of the ceiling
+000005EE  5240                     583      addi.w  #1, d0
+000005F0  4840                     584      swap    d0 ; d0 = bottom to snap to
+Line 585 ERROR: Undefined symbol
+000005F2  2140 55B8                585      move.l  d0, KNIGHT_YPOS(a0)
+000005F6                           586      
+000005F6                           587  checkCollisionX
+Line 588 ERROR: Undefined symbol
+000005F6  43F9 004DBD16            588          lea     BlockStart,a1
+000005FC  5489                     589      adda.l  #$2, a1
+Line 590 ERROR: Undefined symbol
+000005FE  45F9 004DBD16            590      lea     BlockEnd, a2
+00000604                           591      
+00000604                           592  checkCollisionXLoop
+00000604  2F02                     593      move.l  d2,-(sp) ; put x velocity as parameter
+00000606  2F09                     594      move.l  a1,-(sp)
+00000608  2F03                     595      move.l  d3,-(sp) ; move new y pos on stack
+0000060A  2F02                     596      move.l  d2,-(sp) ; move new x pos on stack
+0000060C                           597      
+0000060C  4EB9 000006EA            598      jsr     playerCollideX ; check for ceiling above
+00000612                           599      
+00000612  241F                     600      move.l  (sp)+,d2
+00000614  261F                     601      move.l  (sp)+,d3
+00000616  508F                     602      add.l   #8, sp ; compensate for address put on sp
+00000618                           603      
+00000618  0C07 0000                604      cmpi.b  #0, d7 ; 0 = collided, 1 = no collision
+0000061C  6700 0014                605      beq     returnGetPlayerInput ; if collided, leave loop and set vars
+00000620                           606      
+00000620                           607      ; did not hit ground yet
+Line 608 ERROR: Undefined symbol
+00000620  D3FC 004DBD16            608      adda.l  #BLOCK_DATA_SIZE, a1 ; increase a1 to next block
+00000626  B4C9                     609      cmp     a1, a2 ; is current address at the end? 
+00000628  66DA                     610      bne     checkCollisionXLoop  ; if address!=end, loop
+0000062A                           611      
+Line 612 ERROR: Undefined symbol
+0000062A  2142 55D0                612      move.l  d2, KNIGHT_XPOS(a0) ; add x vel to pos
+0000062E  1E3C 0001                613      move.b  #1, d7
+00000632                           614      
+00000632                           615  returnGetPlayerInput
+00000632  1E3C 0001                616      move.b  #1, d7
+00000636  4E75                     617      rts
+00000638                           618  
+00000638                           619  
+00000638                           620  
+00000638                           621  
+00000638                           622  * player collision system
+00000638                           623  * note- the collision system only works for things SMALLER than the player
+00000638                           624  * Therefore, the player should always be the smallest thing in the 
+00000638                           625  playerCollideYUp
+Line 626 ERROR: Undefined symbol
+00000638                           626      movem.l D_REGS,-(sp) ; preserve all registers
+00000638  202F 0024                627      move.l  36(sp),d0 ; d0 is this x/left 
+0000063C  222F 0028                628      move.l  40(sp),d1 ; d1 is this y/top
+00000640  226F 002C                629      move.l  44(sp),a1 ; a1 = address of other
+00000644                           630      
+00000644  4840                     631      swap    d0
+00000646  4841                     632      swap    d1 ; put x and y into lower word to cut off floating points
+00000648                           633  
+00000648                           634      ; check this.top =< other.bottom
+00000648                           635      
+Line 636 ERROR: Undefined symbol
+00000648  3629 BD16                636      move.w  BLOCK_Y(a1),d3 ; d3 = other top
+Line 637 ERROR: Undefined symbol
+0000064C  3829 BD16                637      move.w  BLOCK_H(a1),d4 ; needed to offset for bottom
+00000650  D644                     638      add.w   d4, d3 ; d3 = other.bottom
+00000652  B243                     639      cmp.w   d3, d1 ; top =< bottom? 
+00000654  6E00 008E                640      bgt     noCollisionFound ; branch if false
+00000658                           641      
+00000658                           642      ; to prevent something above counting a collision, check we are under the block
+00000658                           643      ; check old bottom < block bot
+Line 644 ERROR: Undefined symbol
+00000658  41F9 004DBD16            644      lea     Knight, a0
+Line 645 ERROR: Undefined symbol
+0000065E  2828 BD16                645      move.l  KNIGHT_YPOS(a0),d4
+00000662  4844                     646      swap    d4
+Line 647 ERROR: Undefined symbol
+00000664  0684 004DBD16            647      addi.l  #KNIGHT_HEIGHT, d4 ; d4 = knight's bottom edge
+0000066A  B843                     648      cmp.w     d3, d4 ; old bot > block bot?
+0000066C  6D00 0076                649      blt     noCollisionFound ; branch if old < black
+00000670                           650  
+00000670  6000 0034                651      bra     gotCollisionY ; check the sides 
+00000674                           652  
+00000674                           653  * ground check
+00000674                           654  * parameters:
+00000674                           655  * 0(sp) -> new x value
+00000674                           656  * 4(sp) -> new y value
+00000674                           657  * 8(sp) -> other
+00000674                           658  * d7 = flag return value 
+00000674                           659  playerCollideYDown
+Line 660 ERROR: Undefined symbol
+00000674                           660      movem.l D_REGS,-(sp) ; preserve all registers
+00000674  202F 0024                661      move.l  36(sp),d0 ; d0 is this x/left 
+00000678  222F 0028                662      move.l  40(sp),d1 ; d1 is this y/top
+0000067C  226F 002C                663      move.l  44(sp),a1 ; a1 = address of other
+00000680                           664      
+00000680  4840                     665      swap    d0
+00000682  4841                     666      swap    d1 ; put x and y into lower word to cut off floating points
+00000684                           667  
+00000684                           668      ; check this.bottom >= other.top
+00000684                           669      
+00000684  3401                     670      move.w  d1, d2 ; move y into d2 and add height to make it bottom
+Line 671 ERROR: Undefined symbol
+00000686  0642 BD16                671      addi.w  #KNIGHT_HEIGHT,d2 ; d2 = this.bottom
+Line 672 ERROR: Undefined symbol
+0000068A  3629 BD16                672      move.w  BLOCK_Y(a1),d3 ; d3 = other top
+0000068E  B642                     673      cmp.w   d2, d3
+00000690  6E00 0052                674      bgt     noCollisionFound ; this bottom was above other top, no collision
+00000694                           675      
+00000694                           676      ; to prevent colliding w/ thing above and phasing through thing underneath,
+00000694                           677      ; check old top < block top
+Line 678 ERROR: Undefined symbol
+00000694  41F9 004DBD16            678      lea     Knight, a0
+Line 679 ERROR: Undefined symbol
+0000069A  2828 BD16                679      move.l  KNIGHT_YPOS(a0),d4
+0000069E  4844                     680      swap    d4
+000006A0  B843                     681      cmp.w     d3, d4 
+000006A2                           682      ; break if old top > block top, means block is just underneath
+000006A2  6E00 0040                683      bgt     noCollisionFound
+000006A6                           684      
+000006A6                           685  
+000006A6                           686  *at this point, we collided on the y axis but need to check for overlap
+000006A6                           687  gotCollisionY
+000006A6                           688  
+000006A6                           689      ; check if this left is between others
+000006A6                           690      ; if(this.left>=other.left){
+000006A6                           691      ;   if(this.left =< other.right){
+000006A6                           692      ;       bra     collisionFoundY
+000006A6                           693      ; d0 = this.left
+Line 694 ERROR: Undefined symbol
+000006A6  3429 BD16                694      move.w  BLOCK_X(a1),d2 ; d2 = other.left
+000006AA  B042                     695      cmp     d2, d0 ; branch if d0 < d2
+000006AC  6D00 0012                696      blt     checkCollisionYRight
+Line 697 ERROR: Undefined symbol
+000006B0  3629 BD16                697      move.w  BLOCK_W(a1),d3 ; d3 = other.width
+000006B4  D642                     698      add.w   d2, d3 ; d3 = other.width + other.left = other.right
+000006B6  B043                     699      cmp     d3, d0 ; branch if d0 > d3
+000006B8  6E00 0006                700      bgt     checkCollisionYRight
+000006BC  6000 001C                701      bra     collisionFound ; left wall was within others
+000006C0                           702  
+000006C0                           703  checkCollisionYRight
+000006C0                           704      ; if(this.right >= other.left){
+000006C0                           705      ;   if(this.right <= other.right){
+000006C0                           706      ;       bra collisionFoundY
+Line 707 ERROR: Undefined symbol
+000006C0  0640 BD16                707      add.w   #KNIGHT_HB_W, d0 ; d0 = this.right
+Line 708 ERROR: Undefined symbol
+000006C4  3429 BD16                708      move.w  BLOCK_X(a1),d2 ; d2 = other.left
+000006C8  B042                     709      cmp.w     d2, d0 ; branch if d0 < d2
+000006CA  6D00 0018                710      blt     noCollisionFound
+Line 711 ERROR: Undefined symbol
+000006CE  3629 BD16                711      move.w  BLOCK_W(a1),d3 ; d3 = other.width
+000006D2  D642                     712      add.w   d2, d3 ; d3 = other.width + other.left = other.right
+000006D4  B043                     713      cmp.w     d3, d0 ; branch if d0 > d3
+000006D6  6E00 000C                714      bgt     noCollisionFound
+000006DA                           715      ; found a collision!
+000006DA                           716      
+000006DA                           717  collisionFound
+Line 718 ERROR: Undefined symbol
+000006DA                           718      movem.l (sp)+,D_REGS
+000006DA  4287                     719      clr.l   d7
+000006DC  1E3C 0000                720      move.b  #0, d7
+000006E0  6000 0006                721      bra     returnPlayerCollide
+000006E4                           722      
+000006E4                           723  noCollisionFound
+Line 724 ERROR: Undefined symbol
+000006E4                           724      movem.l (sp)+,D_REGS
+000006E4  1E3C 0001                725      move.b  #1, d7
+000006E8                           726  returnPlayerCollide
+000006E8  4E75                     727      rts
+000006EA                           728      
+000006EA                           729  
+000006EA                           730  * side check
+000006EA                           731  * parameters:
+000006EA                           732  * 0(sp) -> new x value
+000006EA                           733  * 4(sp) -> new y value
+000006EA                           734  * 8(sp) -> other address
+000006EA                           735  * 12(sp) -> x velocity
+000006EA                           736  * d7 = flag return value 
+000006EA                           737  playerCollideX
+Line 738 ERROR: Undefined symbol
+000006EA                           738      movem.l D_REGS,-(sp) ; preserve all registers
+000006EA  2C2F 0028                739      move.l  40(sp),d6 ; d6 = x velocity
+000006EE  202F 0024                740      move.l  36(sp),d0 ; d0 is this x/left 
+000006F2  222F 0028                741      move.l  40(sp),d1 ; d1 is this y/top
+000006F6  226F 002C                742      move.l  44(sp),a1 ; a1 = address of other
+000006FA                           743      
+000006FA  4840                     744      swap    d0
+000006FC  4841                     745      swap    d1 ; put x and y into lower word to cut off floating points
+000006FE  4846                     746      swap    d6
+00000700                           747  
+00000700  BC7C 0000                748      cmp.w   #0, d6
+00000704  6D00 000E                749      blt     playerCollideXLeft 
+00000708                           750       ; if(this.right >= other.left)
+Line 751 ERROR: Undefined symbol
+00000708  0640 BD16                751      add.w   #KNIGHT_HB_W, d0 ; d0 = this.right
+Line 752 ERROR: Undefined symbol
+0000070C  3629 BD16                752      move.w  BLOCK_X(a1),d3 ; d3 = other.left
+00000710  B043                     753      cmp     d3, d0 ; branch if d0 < d3
+00000712  6DD0                     754      blt     noCollisionFound
+00000714                           755      
+00000714                           756  playerCollideXLeft
+00000714                           757      ; if this.left <= other.right
+00000714                           758      ; d0 = this.left
+Line 759 ERROR: Undefined symbol
+00000714  3629 BD16                759      move.w  BLOCK_X(a1),d3 ; d3 = other.left
+Line 760 ERROR: Undefined symbol
+00000718  3829 BD16                760      move.w  BLOCK_W(a1),d4
+0000071C  D644                     761      add.w   d4, d3 ; d3 = other.right
+0000071E  B043                     762      cmp.w   d3, d0 
+00000720  6EC2                     763      bgt     noCollisionFound
+00000722                           764      
+00000722                           765  * now we know that there is overlap on either the left or right edge,
+00000722                           766  * but we need to confirm that the top OR bottom edge is also overlapping
+00000722                           767  playerCollideXCheckTop
+00000722                           768      ; if this.top >= other.top
+00000722                           769          ; if this.top <= other.bottom
+Line 770 ERROR: Undefined symbol
+00000722  3629 BD16                770      move.w  BLOCK_Y(a1),d3 ; d3 = other.top
+00000726  B243                     771      cmp     d3, d1 ; this top >= other.top?
+00000728  6D00 0010                772      blt     playerCollideXCheckTopSmaller
+Line 773 ERROR: Undefined symbol
+0000072C  3829 BD16                773      move.w  BLOCK_H(a1),d4
+00000730  D644                     774      add.w   d4, d3
+00000732  B243                     775      cmp     d3, d1 ; this top <= other.bottom??
+00000734  6E00 0004                776      bgt     playerCollideXCheckTopSmaller
+00000738  60A0                     777      bra     collisionFound
+0000073A                           778  playerCollideXCheckTopSmaller
+0000073A                           779  
+0000073A                           780  playerCollideXCheckBottom
+0000073A                           781      ; this.bottom >= other.top
+0000073A                           782          ; this.bottom <= other.bottom
+Line 783 ERROR: Undefined symbol
+0000073A  3629 BD16                783      move.w  BLOCK_Y(a1),d3 ; d3 = other.top
+Line 784 ERROR: Undefined symbol
+0000073E  41F9 004DBD16            784      lea     Knight, a0
+Line 785 ERROR: Undefined symbol
+00000744  3A28 BD16                785      move.w  KNIGHT_HEIGHT(a0),d5
+00000748  DA41                     786      add.w   d1,d5 ; d5 = this.bottom
+0000074A  BA43                     787      cmp     d3, d5 ; bottom>= top?
+0000074C  6D00 0012                788      blt     playerCollideXCheckBottomSmaller
+Line 789 ERROR: Undefined symbol
+00000750  3829 BD16                789      move.w  BLOCK_H(a1),d4
+00000754  D644                     790      add.w   d4, d3 ; d3 = other.bottom
+00000756  B243                     791      cmp     d3, d1 ; this bottom <= other.bottom??
+00000758  6E00 0006                792      bgt     playerCollideXCheckBottomSmaller
+0000075C  6000 FF7C                793      bra     collisionFound
+00000760                           794      
+00000760                           795  playerCollideXCheckBottomSmaller
+00000760  6082                     796      bra     noCollisionFound
+00000762                           797  
+00000762                           798  
+00000762                           799  
+00000762                           800  
+00000762                           801  
+00000762                           802  
+00000762                           803  
+00000762                           804  
+00000762                           805  
+00000762                           806  
+00000762                           807  
+00000762                           808  
+00000762                           809  
+00000762                           810  
+00000762                           811  
+00000762                           812  
+00000762                           813  
+00000762                           814  
+00000762                           815  
+00000762                           816  
+00000762                           817  
+Line 818 WARNING: END directive missing, starting address not set
+
+189 errors detected
+1 warning generated
+
+
+SYMBOL TABLE INFORMATION
+Symbol-name         Value
+-------------------------
+ADDPLAYERGRAVITY    4C8
+ADVANCINGPLAYERATTACK  348
+CEILINGCHECKLOOP    5B0
+CEILINGCOLLISION    5DC
+CHECKCOLLISION      536
+CHECKCOLLISIONX     5F6
+CHECKCOLLISIONXLOOP  604
+CHECKCOLLISIONYRIGHT  6C0
+CHECKPLAYERALIVE    11E
+CHECKPLAYERNEEDINVAL  D6
+CHECKXPLAYERINPUT   4E2
+COLLISIONFOUND      6DA
+CONTINUESWORDATTACKLOOP  3EE
+DONTINVALPLAYER     C2
+DRAWPLAYER          2BA
+GETPLAYERINPUT      3FA
+GETPLAYERINPUTD     448
+GETPLAYERINPUTW     494
+GOTCOLLISIONY       6A6
+GROUNDCHECKLOOP     54C
+HANDLEPLAYERATTACK  30A
+HANDLEXVELOCITYINPUT  462
+HANDLEXVELOCITYINPUTD  484
+IDLEPLAYERATTACK    326
+IDLEPLAYERATTACKRETURN  346
+INITPLAYER          0
+INVALHEALTH         14A
+INVALHEALTHEMPTY    1B8
+INVALHEALTHLOOP     16C
+INVALHEALTHLOOPINCREMENT  1FA
+INVALHEALTHRETURN   202
+INVALPLAYER         210
+INVALPLAYERENEMY    270
+KILLPLAYER          140
+MOVEPLAYERX         4F0
+MOVEPLAYERY         51C
+NOCOLLISIONFOUND    6E4
+PERFORMINGPLAYERATTACK  356
+PLAYERCEILINGCHECK  5A2
+PLAYERCOLLIDEX      6EA
+PLAYERCOLLIDEXCHECKBOTTOM  73A
+PLAYERCOLLIDEXCHECKBOTTOMSMALLER  760
+PLAYERCOLLIDEXCHECKTOP  722
+PLAYERCOLLIDEXCHECKTOPSMALLER  73A
+PLAYERCOLLIDEXLEFT  714
+PLAYERCOLLIDEYDOWN  674
+PLAYERCOLLIDEYUP    638
+PLAYERGROUNDCHECK   53E
+PLAYERISGROUNDED    57E
+RETURNGETPLAYERINPUT  632
+RETURNPLAYERCOLLIDE  6E8
+RETURNPLAYERNEEDINVAL  112
+RETURNPLAYERNOINVAL  118
+RETURNSWORDATTACK   3F8
+SWORDATTACK         36C
+SWORDATTACKLOOP     380
+UPDATEPLAYER        92
